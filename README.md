@@ -1,86 +1,55 @@
-# 🏦 Home Credit Default Risk Prediction — Stacking Ensemble
+# Loan Risk Assessment Prediction System
 
-Advanced machine learning solution for predicting loan default risk using the Home Credit dataset.  
-Built for the SYNTHESIZE 2026 AI Hackathon.
+This repository now contains a production-friendly loan risk pipeline built around a frozen LightGBM model artifact at `models/LightGBM.pkl`.
 
-This project implements a high-performance stacked ensemble combining LightGBM, XGBoost, and CatBoost with extensive feature engineering and target encoding.
+The model is trained from the Home Credit dataset using the same business fields that appear in the project schema:
 
----
+- `gender`
+- `owns_car`
+- `owns_realty`
+- `income_total`
+- `education_type`
+- `family_status`
+- `housing_type`
+- `occupation_type`
+- `cnt_children`
+- `family_members`
+- `credit_amount`
+- `annuity_amount`
+- `goods_price`
+- `loan_type`
 
-# 📌 Problem Statement
+## Architecture
 
-Financial institutions must assess the risk of loan default before approving credit.  
-The objective is to predict the probability that a loan applicant will default.
+- Streamlit dashboard in `frontend/dashboard.py`
+- FastAPI backend in `backend/app/main.py`
+- Frozen model artifact in `models/LightGBM.pkl`
+- Prediction payloads shaped around `customers` and `loan_applications`
 
-- TARGET = 1 → Default
-- TARGET = 0 → Repay
-
-Dataset:
-- ~300,000 loan applications  
-- 120+ features  
-- Numerical + categorical + missing data  
-- Imbalanced (~8% defaults)  
-
-Evaluation Metric: **ROC-AUC**
-
----
-
-# 🚀 Solution Overview
-
-This solution uses a **multi-model stacking ensemble** with advanced feature engineering to achieve strong predictive performance (>0.80 ROC-AUC).
-
-## 🔹 Key Techniques
-
-- Extensive feature engineering (financial ratios, EXT_SOURCE interactions)
-- Target encoding (OOF)
-- Frequency & count encoding
-- Polynomial feature interactions
-- Risk score engineered features
-- Missing value indicators
-- Feature binning
-- Class imbalance handling
-- GPU-accelerated gradient boosting
-- 3-model stacking ensemble
-
----
-
-# 🧠 Model Architecture
-
-Level-1 Models:
-- LightGBM (DART)
-- LightGBM (GBDT)
-- XGBoost
-- CatBoost
-
-Level-2 Meta-Learner:
-- Logistic Regression / LightGBM
-
-Ensemble Strategy:
-- Stratified K-Fold
-- Multi-seed averaging
-- Out-of-fold predictions
-
----
-
-# 📊 Feature Engineering Highlights
-
-Examples of engineered predictors:
-
-- CREDIT_INCOME_RATIO  
-- PAYMENT_RATE  
-- LOAN_BURDEN_SCORE  
-- EXT_SOURCE interactions  
-- AGE_EMPLOYED_RATIO  
-- INCOME_PER_PERSON  
-- EXT_MEAN / EXT_STD / EXT_PROD  
-- CREDIT_ANNUITY_RATIO  
-- RISK_SCORE / NET_RISK_SCORE  
-
-Total features after engineering: **500+**
-
----
-
-# ⚙️ Installation
+## Train the model
 
 ```bash
-pip install numpy pandas scikit-learn lightgbm xgboost catboost
+python training/train.py
+```
+
+This reads `dataset/train.csv`, trains the pipeline, and saves:
+
+- `models/LightGBM.pkl`
+- `models/LightGBM.metadata.json`
+
+## Run the API
+
+```bash
+uvicorn backend.app.main:app --reload
+```
+
+## Run the dashboard
+
+```bash
+streamlit run frontend/dashboard.py
+```
+
+## Core tables
+
+The project SQL schema is documented in `docs/schema.sql`.
+
