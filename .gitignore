@@ -1,0 +1,8 @@
+dataset/
+*.csv
+__pycache__/
+*.pyc
+venv/
+.env
+*.pkl
+*.joblib
