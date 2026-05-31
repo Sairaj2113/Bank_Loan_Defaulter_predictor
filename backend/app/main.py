@@ -1,14 +1,25 @@
 from __future__ import annotations
 
-from functools import lru_cache
+from uuid import UUID
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.responses import HTMLResponse
 
-from backend.app.database.database import ping_database
-from backend.app.ml.artifact import load_model_bundle
-from backend.app.ml.feature_builder import probability_to_risk, payload_to_frame
-from backend.app.schemas.prediction import PredictionRequest, PredictionResponse
+from backend.app.database.database import get_db, ping_database
+from backend.app.ml.inference import get_model_bundle, score_payload
+from backend.app.schemas.customer import CustomerDetailResponse, CustomerListResponse
+from backend.app.schemas.prediction import (
+    PredictionListResponse,
+    PredictionRequest,
+    PredictionRequestByCustomer,
+    PredictionResponse,
+)
+from backend.app.services.loan_service import (
+    get_customer_detail,
+    list_customers,
+    list_predictions,
+    predict_for_customer,
+)
 
 app = FastAPI(title="Loan Risk Assessment API", version="1.0.0")
 
@@ -34,14 +45,6 @@ DEMO_CLIENT = {
         "loan_type": "Cash loans",
     },
 }
-
-
-@lru_cache(maxsize=1)
-def get_model_bundle():
-    bundle = load_model_bundle()
-    if "pipeline" not in bundle:
-        raise RuntimeError("Saved model bundle is missing the pipeline object.")
-    return bundle
 
 
 @app.get("/health")
@@ -70,6 +73,33 @@ def db_health() -> dict[str, str]:
         "status": "up",
         "connected": str(bool(connected)).lower(),
     }
+
+
+@app.get("/customers", response_model=CustomerListResponse)
+def get_customers(
+    q: str | None = Query(default=None, description="Search customer id or attributes"),
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    db=Depends(get_db),
+) -> dict:
+    return list_customers(db, q, limit, offset)
+
+
+@app.get("/customer/{customer_id}", response_model=CustomerDetailResponse)
+def get_customer(customer_id: UUID, db=Depends(get_db)) -> dict:
+    detail = get_customer_detail(db, customer_id)
+    if not detail:
+        raise HTTPException(status_code=404, detail="Customer not found.")
+    return detail
+
+
+@app.get("/predictions", response_model=PredictionListResponse)
+def get_predictions(
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    db=Depends(get_db),
+) -> dict:
+    return list_predictions(db, limit, offset)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -105,38 +135,26 @@ def root() -> str:
 
 @app.get("/model-info")
 def model_info() -> dict[str, object]:
-    try:
-        bundle = get_model_bundle()
-    except FileNotFoundError:
-        raise HTTPException(status_code=503, detail="Model artifact is not loaded.")
-
+    bundle = get_model_bundle()
     metadata = bundle.get("metadata", {})
     return {
-        "model_version": metadata.get("model_version", "unknown"),
+        "model_name": metadata.get("model_name", "LightGBM"),
+        "model_version": metadata.get("model_version", "lightgbm_v1"),
         "validation_auc": metadata.get("validation_auc"),
-        "trained_at": metadata.get("trained_at"),
+        "feature_count": metadata.get("feature_count"),
     }
 
 
 @app.get("/demo-prediction")
 def demo_prediction() -> dict[str, object]:
-    try:
-        bundle = get_model_bundle()
-    except FileNotFoundError:
-        raise HTTPException(status_code=503, detail="Model artifact is not loaded.")
-
-    pipeline = bundle["pipeline"]
+    score = score_payload(DEMO_CLIENT)
+    bundle = get_model_bundle()
     metadata = bundle.get("metadata", {})
-    features = payload_to_frame(DEMO_CLIENT)
-    probability = float(pipeline.predict_proba(features)[0, 1])
-    risk_category = probability_to_risk(probability)
-    recommendation = "APPROVE" if risk_category == "LOW_RISK" else "REVIEW" if risk_category == "MEDIUM_RISK" else "REJECT"
-
     return {
         "client": DEMO_CLIENT,
-        "probability_default": round(probability, 6),
-        "risk_category": risk_category,
-        "recommendation": recommendation,
+        "probability_default": score["probability_default"],
+        "risk_category": score["risk_category"],
+        "recommendation": score["recommendation"],
         "model_version": str(metadata.get("model_version", "lightgbm_v1")),
     }
 
@@ -144,27 +162,40 @@ def demo_prediction() -> dict[str, object]:
 @app.post("/predict", response_model=PredictionResponse)
 def predict(request: PredictionRequest) -> PredictionResponse:
     try:
-        bundle = get_model_bundle()
+        score = score_payload(request.model_dump() if hasattr(request, "model_dump") else request.dict())
     except FileNotFoundError:
         raise HTTPException(
             status_code=503,
             detail="Model artifact is missing. Run `python training/train.py` to create models/LightGBM.pkl.",
         )
 
-    pipeline = bundle["pipeline"]
-    metadata = bundle.get("metadata", {})
-
-    request_payload = request.model_dump() if hasattr(request, "model_dump") else request.dict()
-    features = payload_to_frame(request_payload)
-    probability = float(pipeline.predict_proba(features)[0, 1])
-    risk_category = probability_to_risk(probability)
-    recommendation = "APPROVE" if risk_category == "LOW_RISK" else "REVIEW" if risk_category == "MEDIUM_RISK" else "REJECT"
-
     return PredictionResponse(
         customer_id=request.customer.customer_id,
         application_id=request.application.application_id,
-        probability_default=round(probability, 6),
-        risk_category=risk_category,
-        model_version=str(metadata.get("model_version", "lightgbm_v1")),
-        recommendation=recommendation,
+        probability_default=score["probability_default"],
+        risk_category=score["risk_category"],
+        model_version=score["model_version"],
+        recommendation=score["recommendation"],
+    )
+
+
+@app.post("/predict/{customer_id}", response_model=PredictionResponse)
+def predict_for_existing_customer(
+    customer_id: UUID,
+    request: PredictionRequestByCustomer,
+    db=Depends(get_db),
+) -> PredictionResponse:
+    application_data = request.model_dump() if hasattr(request, "model_dump") else request.dict()
+    result = predict_for_customer(db, customer_id, application_data)
+    if not result:
+        raise HTTPException(status_code=404, detail="Customer not found.")
+
+    return PredictionResponse(
+        prediction_id=result["prediction_id"],
+        application_id=result["application_id"],
+        customer_id=result["customer_id"],
+        probability_default=result["probability_default"],
+        risk_category=result["risk_category"],
+        model_version=result["model_version"],
+        recommendation=result["recommendation"],
     )

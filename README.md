@@ -21,7 +21,7 @@ The model is trained from the Home Credit dataset using the same business fields
 
 ## Architecture
 
-- Streamlit dashboard in `frontend/dashboard.py`
+- Animated PySide6 desktop dashboard in `desktop_app.py`
 - FastAPI backend in `backend/app/main.py`
 - Frozen model artifact in `models/LightGBM.pkl`
 - Prediction payloads shaped around `customers` and `loan_applications`
@@ -43,7 +43,27 @@ This reads `dataset/train.csv`, trains the pipeline, and saves:
 uvicorn backend.app.main:app --reload
 ```
 
+API routes:
+
+- `GET /health`
+- `GET /db-health`
+- `GET /customers`
+- `GET /customer/{customer_id}`
+- `GET /predictions`
+- `POST /predict/{customer_id}`
+
 ## Run the dashboard
+
+```bash
+python desktop_app.py
+```
+
+Demo login:
+
+- Username: `bankadmin`
+- Password: `admin123`
+
+If you still want the web version, you can run:
 
 ```bash
 streamlit run frontend/dashboard.py
@@ -52,4 +72,3 @@ streamlit run frontend/dashboard.py
 ## Core tables
 
 The project SQL schema is documented in `docs/schema.sql`.
-

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Optional
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -27,16 +29,40 @@ class LoanApplicationPayload(BaseModel):
     loan_type: str
 
 
+class PredictionRequestByCustomer(BaseModel):
+    credit_amount: float = Field(..., gt=0)
+    annuity_amount: float = Field(..., gt=0)
+    goods_price: float = Field(..., gt=0)
+    loan_type: str
+
+
 class PredictionRequest(BaseModel):
     customer: CustomerPayload
     application: LoanApplicationPayload
 
 
 class PredictionResponse(BaseModel):
-    customer_id: Optional[str] = None
-    application_id: Optional[str] = None
+    prediction_id: Optional[UUID] = None
+    application_id: Optional[UUID] = None
+    customer_id: Optional[UUID] = None
     probability_default: float
     risk_category: str
     model_version: str
     recommendation: str
 
+
+class PredictionListItem(BaseModel):
+    prediction_id: UUID
+    application_id: UUID
+    customer_id: UUID
+    probability_default: float
+    risk_category: str
+    model_version: str
+    predicted_at: Optional[datetime] = None
+
+
+class PredictionListResponse(BaseModel):
+    items: list[PredictionListItem]
+    total: int
+    limit: int
+    offset: int
