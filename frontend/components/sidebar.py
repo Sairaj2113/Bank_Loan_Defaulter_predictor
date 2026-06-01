@@ -106,7 +106,7 @@ def render_navigation() -> str:
 
         page = st.radio(
             "Navigation",
-            ["Dashboard", "Customers", "Customer Detail", "Predictions", "Analytics"],
+            ["Dashboard", "Customers", "Make Prediction", "Predictions", "Analytics", "How to Use", "Model Information"],
             label_visibility="collapsed",
         )
 

@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+pydantic
+sqlalchemy
+numpy
+pandas
+scikit-learn
+lightgbm
+streamlit
+joblib
+psycopg2-binary
+matplotlib
+httpx

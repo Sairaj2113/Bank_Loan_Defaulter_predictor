@@ -69,6 +69,27 @@ If you still want the web version, you can run:
 streamlit run frontend/dashboard.py
 ```
 
+## Docker deployment
+
+Run the full stack locally with PostgreSQL, FastAPI, and Streamlit:
+
+```bash
+docker compose up --build
+```
+
+Services:
+
+- Frontend: `http://localhost:8501`
+- Backend: `http://localhost:8000`
+- PostgreSQL: `localhost:5432`
+
+## CI/CD
+
+GitHub Actions is configured through the workflow file in `.github/workflows/ci.yml`.
+
+- Push to `main` or open a pull request to run smoke tests and Docker image builds.
+- If you want to publish images or deploy automatically, we can add a second workflow with registry credentials and host secrets.
+
 ## Core tables
 
 The project SQL schema is documented in `docs/schema.sql`.

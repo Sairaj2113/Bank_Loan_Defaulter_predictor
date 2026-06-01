@@ -39,6 +39,10 @@ def get_db_health() -> dict:
     return _request_json("GET", "/db-health")
 
 
+def get_model_info() -> dict:
+    return _request_json("GET", "/model-info")
+
+
 def get_customers(query: str | None = None, limit: int = 20, offset: int = 0) -> dict:
     return _request_json("GET", "/customers", params={"q": query, "limit": limit, "offset": offset})
 

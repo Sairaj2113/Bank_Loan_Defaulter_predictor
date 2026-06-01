@@ -17,7 +17,7 @@ from frontend.components.prediction_card import render_prediction_result
 from frontend.components.sidebar import render_navigation
 from frontend.utils.api_client import (
     get_customer, get_customers, get_db_health,
-    get_health, get_predictions, predict_customer,
+    get_health, get_model_info, get_predictions, predict_customer,
 )
 
 APP_USERNAME = "bankadmin"
@@ -393,6 +393,87 @@ def render_kpi_cards(customers: dict, predictions: dict) -> None:
         st.metric("High Risk Cases", f"{high_risk:,}")
 
 
+def render_model_overview(model_info: dict, predictions: dict) -> None:
+    prediction_frame = safe_frame(predictions.get("items", []))
+    avg_prob = pd.to_numeric(prediction_frame.get("probability_default", pd.Series(dtype=float)), errors="coerce").mean()
+    avg_prob = float(0 if pd.isna(avg_prob) else avg_prob)
+    high_risk = int((prediction_frame.get("risk_category", pd.Series(dtype=str)) == "HIGH_RISK").sum()) if not prediction_frame.empty else 0
+    low_risk = int((prediction_frame.get("risk_category", pd.Series(dtype=str)) == "LOW_RISK").sum()) if not prediction_frame.empty else 0
+    model_name = model_info.get("model_name", "LightGBM")
+    model_version = model_info.get("model_version", "unknown")
+    validation_auc = model_info.get("validation_auc", "N/A")
+    feature_count = model_info.get("feature_count", "N/A")
+
+    st.markdown('<div class="section-head">Model Information & Analytics</div>', unsafe_allow_html=True)
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        st.metric("Model Name", str(model_name))
+    with c2:
+        st.metric("Version", str(model_version))
+    with c3:
+        st.metric("Validation AUC", f"{validation_auc:.3f}" if isinstance(validation_auc, (int, float)) else str(validation_auc))
+    with c4:
+        st.metric("Feature Count", str(feature_count))
+
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.metric("Average Default Probability", f"{avg_prob * 100:.1f}%")
+    with c2:
+        st.metric("Low Risk Cases", f"{low_risk:,}")
+    with c3:
+        st.metric("High Risk Cases", f"{high_risk:,}")
+
+    st.caption("Model score summary is computed from the current stored prediction pool.")
+
+
+def render_workflow_panel() -> None:
+    st.info(
+        """
+        **Workflow**
+        1. Open **Make Prediction** and select a customer from PostgreSQL.
+        2. Enter the loan values: credit amount, annuity amount, goods price, and loan type.
+        3. Click **Calculate Risk** to call FastAPI and run the model.
+        4. The prediction is saved in PostgreSQL and shown in **Predictions** and **Analytics**.
+        5. The dashboard reflects live model and risk statistics.
+        """
+    )
+
+
+def render_how_to_use_page() -> None:
+    st.markdown('<div class="section-head">How to Use</div>', unsafe_allow_html=True)
+    st.info(
+        """
+        **Step-by-step**
+        1. Open **Make Prediction** from the sidebar.
+        2. Choose a customer from the customer list.
+        3. Fill in the loan amount, repayment amount, goods price, and loan type.
+        4. Press **Calculate Risk** to generate the default probability.
+        5. Review the risk badge, recommendation, and stored prediction history.
+        """
+    )
+    render_workflow_panel()
+
+
+def render_model_information_page(predictions: dict) -> None:
+    st.markdown('<div class="section-head">Model Information</div>', unsafe_allow_html=True)
+    try:
+        model_info = get_model_info()
+    except Exception as exc:
+        st.error(f"Unable to load model information: {exc}")
+        model_info = {}
+
+    render_model_overview(model_info, predictions)
+
+    st.markdown('<div class="ind-divider"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-head">Model Notes</div>', unsafe_allow_html=True)
+    st.info(
+        """
+        This app uses the trained LightGBM pipeline loaded from the backend model artifact.
+        The analytics below are computed from the predictions already stored in PostgreSQL.
+        """
+    )
+
+
 # ─── Charts ───────────────────────────────────────────────────────────────────
 def render_bar(frame: pd.DataFrame, column: str, title: str, color: str = AMBER) -> None:
     _apply_chart_theme()
@@ -597,9 +678,11 @@ def render_customer_detail_page(customer_id: str | None) -> None:
         st.json(customer)
         st.markdown('<div class="section-head">Recent Applications</div>', unsafe_allow_html=True)
         st.dataframe(pd.DataFrame(selected.get("recent_applications", [])), use_container_width=True, hide_index=True)
+        st.markdown('<div class="section-head">Previous Predictions</div>', unsafe_allow_html=True)
+        st.dataframe(pd.DataFrame(selected.get("recent_predictions", [])), use_container_width=True, hide_index=True)
 
     with right:
-        st.markdown('<div class="section-head">Risk Assessment</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-head">Make Prediction</div>', unsafe_allow_html=True)
         defaults = {
             "credit_amount":  227_520.0,
             "annuity_amount":  13_189.5,
@@ -710,7 +793,7 @@ def main() -> None:
         render_dashboard_page(customers, predictions)
     elif page == "Customers":
         render_customers_page(customers)
-    elif page == "Customer Detail":
+    elif page == "Make Prediction":
         selected = render_customers_page(customers)
         st.markdown('<div class="ind-divider"></div>', unsafe_allow_html=True)
         render_customer_detail_page(selected)
@@ -718,6 +801,10 @@ def main() -> None:
         render_predictions_page()
     elif page == "Analytics":
         render_analytics_page()
+    elif page == "How to Use":
+        render_how_to_use_page()
+    elif page == "Model Information":
+        render_model_information_page(predictions)
 
 
 if __name__ == "__main__":
