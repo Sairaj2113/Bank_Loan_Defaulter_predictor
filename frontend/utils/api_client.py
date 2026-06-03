@@ -6,7 +6,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
+BACKEND_URL = os.getenv("BACKEND_URL", "https://bank-loan-defaulter-predictor.onrender.com")
 
 
 def _request_json(method: str, path: str, payload: dict | None = None, params: dict | None = None) -> dict:
