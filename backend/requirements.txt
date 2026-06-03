@@ -10,4 +10,3 @@ streamlit
 joblib
 psycopg2-binary
 matplotlib
-PySide6
