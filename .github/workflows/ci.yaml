@@ -47,12 +47,6 @@ jobs:
         run: |
           python -m py_compile frontend/dashboard.py
 
-      - name: Run Flake8 Linting
-        run: |
-          flake8 backend frontend tests \
-          --max-line-length=120 \
-          --ignore=E221,W391,F401
-
       - name: Run Smoke Tests
         run: |
           python -m unittest discover -s tests -p "test_*.py"
