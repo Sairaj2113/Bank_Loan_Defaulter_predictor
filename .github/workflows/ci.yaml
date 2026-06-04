@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DATABASE_URL: ${{ vars.DATABASE_URL }}
 
     steps:
 
@@ -35,9 +35,9 @@ jobs:
         run: |
           pip install -r requirements.txt
 
-      - name: Install Development Dependencies
+      - name: Verify DATABASE_URL Exists
         run: |
-          pip install flake8
+          python -c "import os; print('DATABASE_URL exists:', bool(os.getenv('DATABASE_URL')))"
 
       - name: Verify Backend Syntax
         run: |

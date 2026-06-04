@@ -17,7 +17,7 @@ SessionLocal = sessionmaker(
     autoflush=False,
     bind=engine
 )
-
+    
 
 def get_db():
     db = SessionLocal()
