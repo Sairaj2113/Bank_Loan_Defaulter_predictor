@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      DATABASE_URL: ${{ vars.DATABASE_URL }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
     steps:
 
