@@ -11,3 +11,6 @@ joblib
 psycopg2-binary
 matplotlib
 httpx
+pytest
+flake8
+python-dotenv
