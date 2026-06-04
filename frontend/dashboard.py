@@ -772,10 +772,10 @@ def main() -> None:
     )
 
     try:
-        health    = get_health()
+        health = get_health()
         db_health = get_db_health()
         api_status = health.get("status", "unknown")
-        db_status  = db_health.get("status", "unknown")
+        db_status = db_health.get("status", "unknown")
         st.caption(f"API: {api_status}  ·  DB: {db_status}")
     except Exception:
         st.caption("API health check failed — backend may be offline.")
@@ -783,7 +783,7 @@ def main() -> None:
     page = render_navigation()
 
     try:
-        customers   = get_customers(limit=100, offset=0)
+        customers = get_customers(limit=100, offset=0)
         predictions = get_predictions(limit=100, offset=0)
     except Exception as exc:
         st.error(f"Unable to reach the backend API: {exc}")
