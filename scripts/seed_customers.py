@@ -33,7 +33,6 @@ def parse_args() -> argparse.Namespace:
 
 def load_source_frame(rows: int, mode: str) -> pd.DataFrame:
     usecols = [
-        "SK_ID_CURR",
         "CODE_GENDER",
         "FLAG_OWN_CAR",
         "FLAG_OWN_REALTY",
@@ -66,12 +65,10 @@ def to_bool_flag(value: object) -> bool:
 
 def build_customer_records(frame: pd.DataFrame) -> list[Customer]:
     records: list[Customer] = []
-    for _, row in frame.iterrows():
-        source_id = str(int(row["SK_ID_CURR"]))
+    for row_index, (_, row) in enumerate(frame.iterrows()):
         records.append(
             Customer(
-                customer_id=uuid5(NAMESPACE_URL, f"customer:{source_id}"),
-                source_customer_id=int(source_id),
+                customer_id=uuid5(NAMESPACE_URL, f"customer:{row_index}:{row['CODE_GENDER']}:{row['AMT_INCOME_TOTAL']}"),
                 gender=normalize_text(row["CODE_GENDER"], "XNA"),
                 owns_car=to_bool_flag(row["FLAG_OWN_CAR"]),
                 owns_realty=to_bool_flag(row["FLAG_OWN_REALTY"]),

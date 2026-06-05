@@ -1,6 +1,5 @@
 CREATE TABLE customers (
     customer_id UUID PRIMARY KEY,
-    source_customer_id INTEGER,
     gender VARCHAR(20),
     owns_car BOOLEAN,
     owns_realty BOOLEAN,

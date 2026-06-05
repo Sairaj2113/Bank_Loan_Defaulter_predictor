@@ -12,7 +12,6 @@ from backend.app.ml.inference import score_payload
 def _customer_dict(customer: Customer) -> dict:
     return {
         "customer_id": customer.customer_id,
-        "source_customer_id": int(customer.source_customer_id) if customer.source_customer_id is not None else None,
         "gender": customer.gender,
         "owns_car": customer.owns_car,
         "owns_realty": customer.owns_realty,
@@ -61,7 +60,6 @@ def list_customers(db: Session, query: str | None, limit: int, offset: int) -> d
         filters.append(
             or_(
                 cast(Customer.customer_id, String).ilike(like_pattern),
-                cast(Customer.source_customer_id, String).ilike(like_pattern),
                 Customer.gender.ilike(like_pattern),
                 Customer.education_type.ilike(like_pattern),
                 Customer.family_status.ilike(like_pattern),
