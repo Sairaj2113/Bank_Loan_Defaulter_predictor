@@ -11,6 +11,7 @@ class Customer(Base):
     __tablename__ = "customers"
 
     customer_id = mapped_column(UUID(as_uuid=True), primary_key=True)
+    source_customer_id = mapped_column(Integer, index=True)
     gender = mapped_column(String(20))
     owns_car = mapped_column(Boolean)
     owns_realty = mapped_column(Boolean)

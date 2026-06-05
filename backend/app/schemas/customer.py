@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 class CustomerRead(BaseModel):
     customer_id: UUID
+    source_customer_id: Optional[int] = None
     gender: str
     owns_car: bool
     owns_realty: bool

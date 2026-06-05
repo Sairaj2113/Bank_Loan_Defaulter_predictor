@@ -71,6 +71,7 @@ def build_customer_records(frame: pd.DataFrame) -> list[Customer]:
         records.append(
             Customer(
                 customer_id=uuid5(NAMESPACE_URL, f"customer:{source_id}"),
+                source_customer_id=int(source_id),
                 gender=normalize_text(row["CODE_GENDER"], "XNA"),
                 owns_car=to_bool_flag(row["FLAG_OWN_CAR"]),
                 owns_realty=to_bool_flag(row["FLAG_OWN_REALTY"]),

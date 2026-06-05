@@ -8,14 +8,14 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import streamlit as st
 
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+PACKAGE_ROOT = Path(__file__).resolve().parent
+if str(PACKAGE_ROOT) not in sys.path:
+    sys.path.insert(0, str(PACKAGE_ROOT))
 
-from frontend.components.customer_table import customer_display_label, render_customer_table
-from frontend.components.prediction_card import render_prediction_result
-from frontend.components.sidebar import render_navigation
-from frontend.utils.api_client import get_customer, get_customers, get_predictions, predict_customer
+from components.customer_table import customer_display_label, render_customer_table
+from components.prediction_card import render_prediction_result
+from components.sidebar import render_navigation
+from utils.api_client import get_customer, get_customers, get_predictions, predict_customer
 
 APP_USERNAME = "bankadmin"
 APP_PASSWORD = "admin123"
@@ -47,6 +47,20 @@ html, body, [data-testid="stAppViewContainer"] {
         linear-gradient(180deg, #f8fbff 0%, #f2f7ff 100%) !important;
     color: #213047 !important;
     font-family: 'Manrope', sans-serif !important;
+}
+
+[data-testid="stAppViewContainer"] h1,
+[data-testid="stAppViewContainer"] h2,
+[data-testid="stAppViewContainer"] h3,
+[data-testid="stAppViewContainer"] h4,
+[data-testid="stAppViewContainer"] h5,
+[data-testid="stAppViewContainer"] h6,
+[data-testid="stAppViewContainer"] p,
+[data-testid="stAppViewContainer"] li,
+[data-testid="stAppViewContainer"] label,
+[data-testid="stAppViewContainer"] span,
+[data-testid="stAppViewContainer"] div {
+    color: #213047;
 }
 
 [data-testid="stHeader"] {
@@ -210,6 +224,11 @@ div[data-testid="metric-container"] label {
     color: #6b86a8 !important;
 }
 
+div[data-testid="metric-container"] [data-testid="stMetricLabel"] {
+    color: #5c6f89 !important;
+    opacity: 1 !important;
+}
+
 div[data-testid="metric-container"] [data-testid="stMetricValue"] {
     font-family: 'Space Grotesk', sans-serif !important;
     font-size: 1.75rem !important;
@@ -220,13 +239,42 @@ div[data-testid="metric-container"] [data-testid="stMetricValue"] {
 .stTextInput input,
 .stNumberInput input,
 .stSelectbox select,
-[data-baseweb="select"] div,
+[data-baseweb="select"] [role="combobox"],
 [data-baseweb="input"] input {
     background: #ffffff !important;
     border: 1px solid #cfddee !important;
     color: #213047 !important;
     font-family: 'Manrope', sans-serif !important;
     border-radius: 14px !important;
+}
+
+.stSelectbox [data-baseweb="select"] {
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.stSelectbox [data-baseweb="select"] > div {
+    background: #ffffff !important;
+    border: 1px solid #cfddee !important;
+    border-radius: 14px !important;
+    box-shadow: none !important;
+}
+
+.stSelectbox [data-baseweb="select"] svg {
+    fill: #2f6fed !important;
+    color: #2f6fed !important;
+    opacity: 1 !important;
+}
+
+.stSelectbox [data-baseweb="select"] [role="combobox"] {
+    background: #ffffff !important;
+    border: 1px solid #cfddee !important;
+    box-shadow: none !important;
+}
+
+.stSelectbox [data-baseweb="select"] [role="option"] {
+    border: none !important;
+    box-shadow: none !important;
 }
 
 .stTextInput input:focus,
@@ -262,9 +310,19 @@ div[data-testid="metric-container"] [data-testid="stMetricValue"] {
     font-family: 'Manrope', sans-serif !important;
 }
 
+div[data-testid="stAlert"] {
+    background: #f8fbff !important;
+    border: 1px solid #d7e3f3 !important;
+    color: #213047 !important;
+}
+
+div[data-testid="stAlert"] * {
+    color: #213047 !important;
+}
+
 .stCaption {
     font-family: 'Manrope', sans-serif !important;
-    color: #5d718d !important;
+    color: #33465e !important;
 }
 
 .login-plate {
@@ -397,6 +455,7 @@ def _asset_label(item: dict) -> str:
 
 def customer_detail_frame(customer: dict) -> pd.DataFrame:
     rows = [
+        ("Customer ID", _safe_text(customer.get("customer_id"))),
         ("Gender", _safe_text(customer.get("gender"))),
         ("Education", _safe_text(customer.get("education_type"))),
         ("Family status", _safe_text(customer.get("family_status"))),
@@ -538,39 +597,6 @@ def render_kpi_cards(customers: dict, predictions: dict) -> None:
         st.metric("High Risk Cases", f"{high_risk:,}")
 
 
-def render_model_overview(predictions: dict) -> None:
-    prediction_frame = safe_frame(predictions.get("items", []))
-    avg_prob = pd.to_numeric(prediction_frame.get("probability_default", pd.Series(dtype=float)), errors="coerce").mean()
-    avg_prob = float(0 if pd.isna(avg_prob) else avg_prob)
-    high_risk = int((prediction_frame.get("risk_category", pd.Series(dtype=str)) == "HIGH_RISK").sum()) if not prediction_frame.empty else 0
-    low_risk = int((prediction_frame.get("risk_category", pd.Series(dtype=str)) == "LOW_RISK").sum()) if not prediction_frame.empty else 0
-    total = int(len(prediction_frame))
-
-    st.markdown('<div class="section-head">Risk Insights</div>', unsafe_allow_html=True)
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        st.metric("Recent Reviews", f"{total:,}")
-    with c2:
-        st.metric("Average Risk", _format_percent(avg_prob))
-    with c3:
-        st.metric("Low Risk Cases", f"{low_risk:,}")
-    with c4:
-        st.metric("High Risk Cases", f"{high_risk:,}")
-
-    st.markdown(
-        """
-        <div class="insight-card">
-          <h4>What this page tells you</h4>
-          <p>
-            These figures summarize the latest customer reviews and loan outcomes already saved in the app.
-            They help you spot the balance between safer and higher-risk decisions without exposing any internal system details.
-          </p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
 def render_workflow_panel() -> None:
     st.info(
         """
@@ -596,25 +622,6 @@ def render_how_to_use_page() -> None:
         """
     )
     render_workflow_panel()
-
-
-def render_insights_page(predictions: dict) -> None:
-    st.markdown('<div class="section-head">Insights</div>', unsafe_allow_html=True)
-    render_model_overview(predictions)
-
-    st.markdown('<div class="ind-divider"></div>', unsafe_allow_html=True)
-    st.markdown(
-        """
-        <div class="insight-card">
-          <h4>Helpful context</h4>
-          <p>
-            This workspace focuses on customer-facing summaries, not system internals. The charts and tables
-            below are based on the latest stored customer and prediction records.
-          </p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
 
 
 def render_bar(frame: pd.DataFrame, column: str, title: str, color: str = PRIMARY) -> None:
@@ -955,8 +962,6 @@ def main() -> None:
         render_analytics_page()
     elif page == "How to Use":
         render_how_to_use_page()
-    elif page == "Insights":
-        render_insights_page(predictions)
 
 
 if __name__ == "__main__":

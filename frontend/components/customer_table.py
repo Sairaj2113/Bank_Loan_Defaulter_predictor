@@ -80,6 +80,7 @@ def _asset_label(item: dict) -> str:
 
 def customer_display_label(item: dict) -> str:
     parts = [
+        _stringify(item.get("customer_id"), "Customer ID unavailable"),
         _stringify(item.get("family_status"), "Family status unknown"),
         _stringify(item.get("occupation_type"), "Occupation unknown"),
         _stringify(item.get("education_type"), "Education unknown"),
@@ -106,7 +107,7 @@ def customers_dataframe(items: list[dict]) -> pd.DataFrame:
     if not items:
         return pd.DataFrame(
             columns=[
-                "Customer profile",
+                "Customer ID",
                 "Gender",
                 "Education",
                 "Family status",
@@ -123,7 +124,7 @@ def customers_dataframe(items: list[dict]) -> pd.DataFrame:
     for item in items:
         rows.append(
             {
-                "Customer profile": customer_display_label(item),
+                "Customer ID": _stringify(item.get("customer_id"), "Unknown"),
                 "Gender": _stringify(item.get("gender")),
                 "Education": _stringify(item.get("education_type")),
                 "Family status": _stringify(item.get("family_status")),

@@ -22,8 +22,9 @@ _SIDEBAR_CSS = """
 
 [data-testid="stSidebar"] .stRadio label {
     font-family: 'Manrope', sans-serif !important;
-    font-size: 0.82rem !important;
-    color: #385072 !important;
+    font-size: 0.9rem !important;
+    font-weight: 600 !important;
+    color: #17345e !important;
     letter-spacing: 0.01em !important;
     padding: 7px 0 !important;
     transition: color 0.15s ease, transform 0.15s ease;
@@ -74,7 +75,7 @@ _SIDEBAR_CSS = """
 .sidebar-sub {
     font-family: 'Manrope', sans-serif;
     font-size: 0.78rem;
-    color: #5e7491;
+    color: #3f587a;
     letter-spacing: 0.01em;
     margin-bottom: 18px;
 }
@@ -101,7 +102,7 @@ def render_navigation() -> str:
 
         page = st.radio(
             "Navigation",
-            ["Dashboard", "Customers", "Make Prediction", "Predictions", "Analytics", "How to Use", "Insights"],
+            ["Dashboard", "Customers", "Make Prediction", "Predictions", "Analytics", "How to Use"],
             label_visibility="collapsed",
         )
 
