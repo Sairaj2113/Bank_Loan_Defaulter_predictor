@@ -4,153 +4,172 @@ import streamlit as st
 
 _CARD_CSS = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Share+Tech+Mono&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap');
 
 .risk-result-wrap {
-    background: #0d1117;
-    border: 1px solid #1f2937;
-    border-top: 3px solid #f59e0b;
-    border-radius: 4px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    border: 1px solid #d6e2f1;
+    border-top: 4px solid #38bdf8;
+    border-radius: 20px;
     padding: 24px;
     margin: 16px 0;
     position: relative;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.06);
 }
 
 .risk-result-wrap::before {
-    content: "RISK ASSESSMENT REPORT";
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.62rem;
-    letter-spacing: 0.2em;
-    color: #4b5563;
+    content: "LOAN DECISION SUMMARY";
+    font-family: 'Manrope', sans-serif;
+    font-size: 0.66rem;
+    letter-spacing: 0.18em;
+    color: #6b86a8;
     position: absolute;
     top: -10px;
     left: 20px;
-    background: #0d1117;
-    padding: 0 6px;
+    background: #ffffff;
+    padding: 0 8px;
 }
 
 .risk-label {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.7rem;
+    font-family: 'Manrope', sans-serif;
+    font-size: 0.72rem;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: #6b7280;
+    color: #6b86a8;
     margin-bottom: 4px;
 }
 
-.risk-value-high {
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 2.4rem;
+.risk-value-high,
+.risk-value-medium,
+.risk-value-low {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 2.5rem;
     font-weight: 700;
-    color: #ef4444;
-    line-height: 1.1;
+    line-height: 1.05;
+}
+
+.risk-value-high {
+    color: #e85c70;
 }
 
 .risk-value-medium {
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 2.4rem;
-    font-weight: 700;
-    color: #f59e0b;
-    line-height: 1.1;
+    color: #d97706;
 }
 
 .risk-value-low {
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 2.4rem;
-    font-weight: 700;
-    color: #22c55e;
-    line-height: 1.1;
+    color: #0f9f9a;
 }
 
 .risk-badge {
     display: inline-block;
-    font-family: 'Share Tech Mono', monospace;
+    font-family: 'Manrope', sans-serif;
     font-size: 0.75rem;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    padding: 4px 12px;
-    border-radius: 2px;
+    padding: 5px 12px;
+    border-radius: 999px;
     margin-top: 4px;
 }
 
-.badge-high   { background: #450a0a; color: #ef4444; border: 1px solid #ef4444; }
-.badge-medium { background: #451a03; color: #f59e0b; border: 1px solid #f59e0b; }
-.badge-low    { background: #052e16; color: #22c55e; border: 1px solid #22c55e; }
-
-.risk-bar-track {
-    height: 8px;
-    background: #1f2937;
-    border-radius: 0;
-    margin: 16px 0 10px 0;
-    overflow: hidden;
-    position: relative;
+.badge-high {
+    background: #fff1f4;
+    color: #c2415d;
+    border: 1px solid #f5bcc6;
 }
 
-.risk-bar-fill-high   { height: 100%; background: linear-gradient(90deg, #7f1d1d, #ef4444); transition: width 0.6s ease; }
-.risk-bar-fill-medium { height: 100%; background: linear-gradient(90deg, #78350f, #f59e0b); transition: width 0.6s ease; }
-.risk-bar-fill-low    { height: 100%; background: linear-gradient(90deg, #14532d, #22c55e); transition: width 0.6s ease; }
+.badge-medium {
+    background: #fff8ed;
+    color: #b45309;
+    border: 1px solid #f6d39b;
+}
 
-.model-tag {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.65rem;
-    color: #374151;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    margin-top: 8px;
+.badge-low {
+    background: #ecfdf8;
+    color: #0f766e;
+    border: 1px solid #a7f3d0;
+}
+
+.risk-bar-track {
+    height: 10px;
+    background: #e5eef8;
+    border-radius: 999px;
+    margin: 16px 0 10px 0;
+    overflow: hidden;
+}
+
+.risk-bar-fill-high {
+    height: 100%;
+    background: linear-gradient(90deg, #f59eb1, #e85c70);
+    transition: width 0.6s ease;
+}
+
+.risk-bar-fill-medium {
+    height: 100%;
+    background: linear-gradient(90deg, #f6c27b, #d97706);
+    transition: width 0.6s ease;
+}
+
+.risk-bar-fill-low {
+    height: 100%;
+    background: linear-gradient(90deg, #5eead4, #0f9f9a);
+    transition: width 0.6s ease;
 }
 
 .recommendation-box {
     margin-top: 16px;
-    padding: 12px 16px;
-    border-left: 3px solid #f59e0b;
-    background: #111827;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.78rem;
-    color: #d1d5db;
-    letter-spacing: 0.04em;
+    padding: 14px 16px;
+    border-left: 4px solid #38bdf8;
+    background: #f4f8fd;
+    border-radius: 14px;
+    font-family: 'Manrope', sans-serif;
+    font-size: 0.9rem;
+    color: #334155;
+    line-height: 1.55;
 }
 
 .recommendation-label {
-    font-size: 0.65rem;
+    font-size: 0.68rem;
     letter-spacing: 0.14em;
-    color: #f59e0b;
+    color: #1d4ed8;
     text-transform: uppercase;
     margin-bottom: 4px;
+    font-weight: 700;
 }
 
 .factors-header {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.7rem;
+    font-family: 'Manrope', sans-serif;
+    font-size: 0.72rem;
     letter-spacing: 0.14em;
-    color: #6b7280;
+    color: #6b86a8;
     text-transform: uppercase;
-    border-top: 1px solid #1f2937;
+    border-top: 1px solid #d6e2f1;
     padding-top: 16px;
     margin-top: 16px;
 }
 
 .factor-item {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.78rem;
-    color: #9ca3af;
-    padding: 5px 0;
-    border-bottom: 1px dotted #1f2937;
-    letter-spacing: 0.02em;
+    font-family: 'Manrope', sans-serif;
+    font-size: 0.88rem;
+    color: #4b5f7a;
+    padding: 7px 0;
+    border-bottom: 1px dotted #dbe6f3;
+    letter-spacing: 0.01em;
 }
 
 .factor-item::before {
-    content: "▸ ";
-    color: #f59e0b;
+    content: "- ";
+    color: #38bdf8;
+    font-weight: 700;
 }
 </style>
 """
 
 
 def _tier(probability: float, risk_category: str) -> str:
-    cat = (risk_category or "").upper()
-    if "HIGH" in cat or probability >= 0.60:
+    category = (risk_category or "").upper()
+    if "HIGH" in category or probability >= 0.60:
         return "high"
-    elif "LOW" in cat or probability < 0.35:
+    if "LOW" in category or probability < 0.35:
         return "low"
     return "medium"
 
@@ -160,19 +179,18 @@ def render_prediction_result(result: dict, factors: list[str] | None = None) -> 
     factors = factors or []
 
     probability = float(result["probability_default"])
-    risk_category = result["risk_category"]
+    risk_category = str(result["risk_category"])
     tier = _tier(probability, risk_category)
-    pct = int(probability * 100)
+    pct = int(round(probability * 100))
     bar_class = f"risk-bar-fill-{tier}"
     val_class = f"risk-value-{tier}"
     badge_class = f"badge-{tier}"
 
     rec = result.get("recommendation", "REVIEW")
-    model_ver = result.get("model_version", "unknown")
 
     factors_html = ""
     if factors:
-        items_html = "".join(f'<div class="factor-item">{f}</div>' for f in factors)
+        items_html = "".join(f'<div class="factor-item">{factor}</div>' for factor in factors)
         factors_html = f'<div class="factors-header">Top Risk Factors</div>{items_html}'
 
     html = f"""
@@ -190,7 +208,6 @@ def render_prediction_result(result: dict, factors: list[str] | None = None) -> 
       <div class="risk-bar-track">
         <div class="{bar_class}" style="width:{pct}%;"></div>
       </div>
-      <div class="model-tag">Model · {model_ver}</div>
       <div class="recommendation-box">
         <div class="recommendation-label">Recommendation</div>
         {rec}

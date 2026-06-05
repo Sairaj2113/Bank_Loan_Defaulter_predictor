@@ -3,350 +3,468 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-import pandas as pd
-import matplotlib.pyplot as plt
 import matplotlib as mpl
+import matplotlib.pyplot as plt
+import pandas as pd
 import streamlit as st
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from frontend.components.customer_table import render_customer_table
+from frontend.components.customer_table import customer_display_label, render_customer_table
 from frontend.components.prediction_card import render_prediction_result
 from frontend.components.sidebar import render_navigation
-from frontend.utils.api_client import (
-    get_customer, get_customers, get_db_health,
-    get_health, get_model_info, get_predictions, predict_customer,
-)
+from frontend.utils.api_client import get_customer, get_customers, get_predictions, predict_customer
 
 APP_USERNAME = "bankadmin"
 APP_PASSWORD = "admin123"
 
-# ─── Industrial colour palette ────────────────────────────────────────────────
-STEEL   = "#0d1117"
-PLATE   = "#111827"
-GIRDER  = "#1f2937"
-RIVET   = "#374151"
-GHOST   = "#6b7280"
-SILVER  = "#9ca3af"
-LIGHT   = "#d1d5db"
-AMBER   = "#f59e0b"
-AMBER_D = "#78350f"
-RED     = "#ef4444"
-GREEN   = "#22c55e"
-VIOLET  = "#a78bfa"
+BG = "#f7fbff"
+SURFACE = "#ffffff"
+SURFACE_ALT = "#eef5ff"
+BORDER = "#d7e3f3"
+TEXT = "#213047"
+MUTED = "#5c6f89"
+PRIMARY = "#2f6fed"
+PRIMARY_SOFT = "#dbeafe"
+SECONDARY = "#14b8a6"
+SECONDARY_SOFT = "#def7f3"
+WARNING = "#f59e0b"
+SUCCESS = "#0f9f9a"
+RISK = "#e85c70"
+VIOLET = "#7c8cff"
+GOLD = "#f6b64c"
 
 _GLOBAL_CSS = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&family=Barlow:wght@300;400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap');
 
-/* Base */
 html, body, [data-testid="stAppViewContainer"] {
-    background-color: #0d1117 !important;
-    color: #d1d5db !important;
-    font-family: 'Barlow', sans-serif !important;
+    background:
+        radial-gradient(circle at top left, rgba(47, 111, 237, 0.08), transparent 30%),
+        radial-gradient(circle at bottom right, rgba(20, 184, 166, 0.08), transparent 28%),
+        linear-gradient(180deg, #f8fbff 0%, #f2f7ff 100%) !important;
+    color: #213047 !important;
+    font-family: 'Manrope', sans-serif !important;
 }
 
-[data-testid="stHeader"] { background: #0a0a0a !important; border-bottom: 1px solid #1f2937 !important; }
+[data-testid="stHeader"] {
+    background: rgba(248, 251, 255, 0.82) !important;
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid #d7e3f3 !important;
+}
 
-/* Hero banner */
+[data-testid="stToolbar"] {
+    visibility: hidden;
+}
+
 .hero-banner {
-    background: #0a0a0a;
-    border: 1px solid #1f2937;
-    border-top: 3px solid #f59e0b;
-    border-radius: 4px;
-    padding: 24px 32px;
-    margin-bottom: 24px;
+    background: linear-gradient(135deg, #ffffff 0%, #eff7ff 54%, #eefcf9 100%);
+    border: 1px solid #d7e3f3;
+    border-radius: 24px;
+    padding: 26px 30px;
+    margin-bottom: 22px;
     position: relative;
     overflow: hidden;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.06);
 }
+
 .hero-banner::after {
     content: "";
     position: absolute;
-    top: 0; right: 0; bottom: 0;
-    width: 220px;
-    background: repeating-linear-gradient(
-        -45deg,
-        transparent, transparent 8px,
-        rgba(245,158,11,0.04) 8px, rgba(245,158,11,0.04) 10px
-    );
+    inset: 0;
+    background:
+        radial-gradient(circle at top right, rgba(56, 189, 248, 0.16), transparent 24%),
+        radial-gradient(circle at bottom left, rgba(20, 184, 166, 0.12), transparent 26%);
     pointer-events: none;
 }
+
 .hero-title {
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 1.9rem;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 2.05rem;
     font-weight: 700;
-    color: #f5f5f5;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    margin: 0 0 4px 0;
+    color: #16325c;
+    letter-spacing: 0.01em;
+    margin: 0 0 6px 0;
 }
-.hero-title span { color: #f59e0b; }
+
+.hero-title span {
+    color: #2f6fed;
+}
+
 .hero-sub {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.72rem;
-    color: #6b7280;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    font-family: 'Manrope', sans-serif;
+    font-size: 0.95rem;
+    color: #56708f;
+    line-height: 1.5;
+    max-width: 760px;
 }
+
 .hero-status {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.68rem;
+    gap: 8px;
+    font-family: 'Manrope', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 700;
     letter-spacing: 0.1em;
-    color: #22c55e;
-    background: #052e16;
-    border: 1px solid #166534;
-    border-radius: 2px;
-    padding: 3px 10px;
-    margin-top: 10px;
+    text-transform: uppercase;
+    color: #1d4ed8;
+    background: #ecf5ff;
+    border: 1px solid #bfd8ff;
+    border-radius: 999px;
+    padding: 7px 14px;
+    margin-top: 14px;
 }
 
-/* KPI cards */
+.hero-status::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #38bdf8, #14b8a6);
+    box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.12);
+}
+
 .kpi-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    gap: 10px;
-    margin-bottom: 24px;
+    gap: 14px;
+    margin-bottom: 22px;
 }
+
 .kpi-card {
-    background: #0a0a0a;
-    border: 1px solid #1f2937;
-    border-bottom: 2px solid #f59e0b;
-    border-radius: 4px;
-    padding: 16px 18px;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+    border: 1px solid #d7e3f3;
+    border-radius: 20px;
+    padding: 18px 18px 16px 18px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.05);
     position: relative;
     overflow: hidden;
 }
+
 .kpi-card::before {
     content: "";
     position: absolute;
-    top: 0; left: 0;
-    width: 3px; height: 100%;
-    background: #f59e0b;
-    opacity: 0.3;
+    inset: 0 auto 0 0;
+    width: 4px;
+    background: linear-gradient(180deg, #38bdf8 0%, #14b8a6 100%);
 }
-.kpi-label {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.62rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: #6b7280;
-    margin-bottom: 6px;
-}
-.kpi-value {
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 1.9rem;
-    font-weight: 700;
-    color: #f5f5f5;
-    line-height: 1;
-}
-.kpi-value.amber { color: #f59e0b; }
-.kpi-value.red   { color: #ef4444; }
-.kpi-value.green { color: #22c55e; }
 
-/* Section headers */
+.kpi-label {
+    font-family: 'Manrope', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #6b86a8;
+    margin-bottom: 8px;
+}
+
+.kpi-value {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 2rem;
+    font-weight: 700;
+    color: #16325c;
+    line-height: 1.05;
+}
+
+.kpi-note {
+    margin-top: 6px;
+    font-size: 0.85rem;
+    color: #5d718d;
+}
+
 .section-head {
-    font-family: 'Rajdhani', sans-serif;
+    font-family: 'Space Grotesk', sans-serif;
     font-weight: 700;
     font-size: 1rem;
-    letter-spacing: 0.16em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: #9ca3af;
-    border-left: 3px solid #f59e0b;
-    padding-left: 10px;
-    margin: 20px 0 12px 0;
+    color: #36557d;
+    border-left: 4px solid #38bdf8;
+    padding-left: 12px;
+    margin: 18px 0 12px 0;
 }
 
-/* Divider */
 .ind-divider {
     height: 1px;
-    background: repeating-linear-gradient(
-        90deg,
-        #1f2937 0px, #1f2937 8px,
-        transparent 8px, transparent 14px
-    );
+    background: linear-gradient(90deg, transparent 0%, #d7e3f3 16%, #d7e3f3 84%, transparent 100%);
     margin: 28px 0;
 }
 
-/* Streamlit overrides */
 div[data-testid="metric-container"] {
-    background: #0a0a0a !important;
-    border: 1px solid #1f2937 !important;
-    border-bottom: 2px solid #f59e0b !important;
-    border-radius: 4px !important;
-    padding: 14px 18px !important;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%) !important;
+    border: 1px solid #d7e3f3 !important;
+    border-radius: 18px !important;
+    padding: 16px 18px !important;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05) !important;
 }
+
 div[data-testid="metric-container"] label {
-    font-family: 'Share Tech Mono', monospace !important;
-    font-size: 0.62rem !important;
-    letter-spacing: 0.14em !important;
-    text-transform: uppercase !important;
-    color: #6b7280 !important;
-}
-div[data-testid="metric-container"] [data-testid="stMetricValue"] {
-    font-family: 'Rajdhani', sans-serif !important;
-    font-size: 1.8rem !important;
-    font-weight: 700 !important;
-    color: #f5f5f5 !important;
-}
-
-/* Input overrides */
-.stTextInput input, .stNumberInput input, .stSelectbox select,
-[data-baseweb="select"] div, [data-baseweb="input"] input {
-    background: #0d1117 !important;
-    border: 1px solid #374151 !important;
-    color: #d1d5db !important;
-    font-family: 'Share Tech Mono', monospace !important;
-    font-size: 0.82rem !important;
-    border-radius: 3px !important;
-}
-
-/* Button overrides */
-.stButton > button {
-    background: #f59e0b !important;
-    color: #0a0a0a !important;
-    border: none !important;
-    font-family: 'Rajdhani', sans-serif !important;
-    font-weight: 700 !important;
-    font-size: 0.88rem !important;
+    font-family: 'Manrope', sans-serif !important;
+    font-size: 0.68rem !important;
     letter-spacing: 0.12em !important;
     text-transform: uppercase !important;
-    border-radius: 3px !important;
-    padding: 8px 20px !important;
-    transition: all 0.15s ease !important;
-}
-.stButton > button:hover {
-    background: #d97706 !important;
-    box-shadow: 0 0 18px rgba(245,158,11,0.35) !important;
+    color: #6b86a8 !important;
 }
 
-/* Form submit button */
+div[data-testid="metric-container"] [data-testid="stMetricValue"] {
+    font-family: 'Space Grotesk', sans-serif !important;
+    font-size: 1.75rem !important;
+    font-weight: 700 !important;
+    color: #16325c !important;
+}
+
+.stTextInput input,
+.stNumberInput input,
+.stSelectbox select,
+[data-baseweb="select"] div,
+[data-baseweb="input"] input {
+    background: #ffffff !important;
+    border: 1px solid #cfddee !important;
+    color: #213047 !important;
+    font-family: 'Manrope', sans-serif !important;
+    border-radius: 14px !important;
+}
+
+.stTextInput input:focus,
+.stNumberInput input:focus,
+[data-baseweb="input"] input:focus {
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.14) !important;
+}
+
+.stButton > button,
 .stFormSubmitButton > button {
-    background: #f59e0b !important;
-    color: #0a0a0a !important;
+    background: linear-gradient(135deg, #2f6fed 0%, #14b8a6 100%) !important;
+    color: #ffffff !important;
     border: none !important;
-    font-family: 'Rajdhani', sans-serif !important;
+    font-family: 'Manrope', sans-serif !important;
     font-weight: 700 !important;
     font-size: 0.9rem !important;
-    letter-spacing: 0.12em !important;
-    text-transform: uppercase !important;
-    width: 100% !important;
-    padding: 10px !important;
-}
-
-/* Info / warning / error */
-.stAlert {
-    border-radius: 3px !important;
-    font-family: 'Share Tech Mono', monospace !important;
-    font-size: 0.78rem !important;
-}
-
-/* Caption */
-.stCaption {
-    font-family: 'Share Tech Mono', monospace !important;
-    font-size: 0.68rem !important;
-    color: #4b5563 !important;
     letter-spacing: 0.08em !important;
+    text-transform: uppercase !important;
+    border-radius: 14px !important;
+    padding: 10px 18px !important;
+    box-shadow: 0 12px 30px rgba(47, 111, 237, 0.18) !important;
 }
 
-/* Login screen */
-.login-plate {
-    max-width: 440px;
-    margin: 80px auto;
-    background: #0a0a0a;
-    border: 1px solid #1f2937;
-    border-top: 3px solid #f59e0b;
-    border-radius: 4px;
-    padding: 40px 40px 32px 40px;
-    position: relative;
+.stButton > button:hover,
+.stFormSubmitButton > button:hover {
+    filter: brightness(1.02);
+    box-shadow: 0 16px 34px rgba(47, 111, 237, 0.22) !important;
 }
+
+.stAlert {
+    border-radius: 16px !important;
+    font-family: 'Manrope', sans-serif !important;
+}
+
+.stCaption {
+    font-family: 'Manrope', sans-serif !important;
+    color: #5d718d !important;
+}
+
+.login-plate {
+    max-width: 500px;
+    margin: 78px auto 28px auto;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    border: 1px solid #d7e3f3;
+    border-radius: 24px;
+    padding: 38px 38px 30px 38px;
+    position: relative;
+    box-shadow: 0 20px 45px rgba(15, 23, 42, 0.06);
+}
+
 .login-plate::before {
-    content: "SECURE ACCESS TERMINAL";
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.58rem;
-    letter-spacing: 0.22em;
-    color: #4b5563;
+    content: "SECURE ACCESS";
+    font-family: 'Manrope', sans-serif;
+    font-size: 0.66rem;
+    letter-spacing: 0.2em;
+    color: #6b86a8;
     position: absolute;
-    top: -9px;
+    top: -10px;
     left: 20px;
-    background: #0a0a0a;
+    background: #f8fbff;
     padding: 0 8px;
 }
+
 .login-title {
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 2rem;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 2.2rem;
     font-weight: 700;
-    color: #f5f5f5;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    margin: 0 0 4px 0;
+    color: #16325c;
+    letter-spacing: 0.02em;
+    margin: 0 0 6px 0;
 }
-.login-title span { color: #f59e0b; }
+
+.login-title span {
+    color: #2f6fed;
+}
+
 .login-sub {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.68rem;
-    color: #6b7280;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    margin-bottom: 28px;
+    font-family: 'Manrope', sans-serif;
+    font-size: 0.9rem;
+    color: #56708f;
+    margin-bottom: 24px;
+    line-height: 1.5;
+}
+
+.insight-card {
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    border: 1px solid #d7e3f3;
+    border-radius: 20px;
+    padding: 18px;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
+}
+
+.insight-card h4 {
+    font-family: 'Space Grotesk', sans-serif;
+    margin: 0 0 8px 0;
+    color: #16325c;
+}
+
+.insight-card p {
+    margin: 0;
+    color: #56708f;
+    line-height: 1.55;
 }
 </style>
 """
 
 
-# ─── Matplotlib industrial theme ──────────────────────────────────────────────
 def _apply_chart_theme() -> None:
-    mpl.rcParams.update({
-        "figure.facecolor": PLATE,
-        "axes.facecolor":   STEEL,
-        "axes.edgecolor":   GIRDER,
-        "axes.labelcolor":  GHOST,
-        "axes.titlecolor":  SILVER,
-        "axes.titlesize":   11,
-        "axes.titleweight": "bold",
-        "axes.spines.top":  False,
-        "axes.spines.right":False,
-        "xtick.color":      GHOST,
-        "ytick.color":      GHOST,
-        "text.color":       SILVER,
-        "grid.color":       GIRDER,
-        "grid.linestyle":   "--",
-        "font.family":      "monospace",
-        "figure.dpi":       110,
-    })
+    mpl.rcParams.update(
+        {
+            "figure.facecolor": BG,
+            "axes.facecolor": SURFACE,
+            "axes.edgecolor": BORDER,
+            "axes.labelcolor": MUTED,
+            "axes.titlecolor": TEXT,
+            "axes.titlesize": 11,
+            "axes.titleweight": "bold",
+            "axes.spines.top": False,
+            "axes.spines.right": False,
+            "xtick.color": MUTED,
+            "ytick.color": MUTED,
+            "text.color": TEXT,
+            "grid.color": BORDER,
+            "grid.linestyle": "--",
+            "font.family": "DejaVu Sans",
+            "figure.dpi": 110,
+        }
+    )
 
 
-# ─── Helpers ──────────────────────────────────────────────────────────────────
-def build_risk_factors(customer: dict, application: dict, probability: float) -> list[str]:
-    factors: list[str] = []
-    income         = float(customer.get("income_total", 0) or 0)
-    credit         = float(application.get("credit_amount", 0) or 0)
-    annuity        = float(application.get("annuity_amount", 0) or 0)
-    family_members = int(customer.get("family_members", 1) or 1)
-    owns_assets    = bool(customer.get("owns_car")) or bool(customer.get("owns_realty"))
+def _safe_text(value: object, fallback: str = "Unknown") -> str:
+    if value is None:
+        return fallback
+    text_value = str(value).strip()
+    return text_value if text_value else fallback
 
-    if income and credit / income > 3:
-        factors.append("High credit amount relative to income")
-    if income and annuity / income > 0.3:
-        factors.append("High monthly repayment burden")
-    if income < 120_000:
-        factors.append("Low household income")
-    if family_members >= 4:
-        factors.append("Large household size")
-    if not owns_assets:
-        factors.append("No car or realty ownership")
-    if probability >= 0.7:
-        factors.append("Model confidence is strongly negative")
-    elif probability >= 0.35:
-        factors.append("Moderate risk profile")
-    else:
-        factors.append("Stable repayment profile")
 
-    return factors[:4]
+def _format_currency(value: object) -> str:
+    try:
+        return f"Rs. {float(value):,.0f}"
+    except (TypeError, ValueError):
+        return "Rs. 0"
+
+
+def _format_percent(value: object) -> str:
+    try:
+        return f"{float(value) * 100:.1f}%"
+    except (TypeError, ValueError):
+        return "0.0%"
+
+
+def _format_bool(value: object) -> str:
+    return "Yes" if bool(value) else "No"
+
+
+def _asset_label(item: dict) -> str:
+    owns_car = bool(item.get("owns_car"))
+    owns_realty = bool(item.get("owns_realty"))
+    if owns_car and owns_realty:
+        return "Car and home"
+    if owns_car:
+        return "Car"
+    if owns_realty:
+        return "Home"
+    return "No registered assets"
+
+
+def customer_detail_frame(customer: dict) -> pd.DataFrame:
+    rows = [
+        ("Gender", _safe_text(customer.get("gender"))),
+        ("Education", _safe_text(customer.get("education_type"))),
+        ("Family status", _safe_text(customer.get("family_status"))),
+        ("Housing", _safe_text(customer.get("housing_type"))),
+        ("Occupation", _safe_text(customer.get("occupation_type"))),
+        ("Income", _format_currency(customer.get("income_total"))),
+        ("Children", int(customer.get("cnt_children", 0) or 0)),
+        ("Family members", int(customer.get("family_members", 0) or 0)),
+        ("Owns car", _format_bool(customer.get("owns_car"))),
+        ("Owns home", _format_bool(customer.get("owns_realty"))),
+        ("Assets", _asset_label(customer)),
+    ]
+    return pd.DataFrame(rows, columns=["Field", "Value"])
+
+
+def application_history_frame(items: list[dict]) -> pd.DataFrame:
+    if not items:
+        return pd.DataFrame(columns=["Application date", "Loan type", "Credit amount", "Annuity", "Goods price", "Status"])
+
+    rows = []
+    for item in items:
+        rows.append(
+            {
+                "Application date": _safe_text(item.get("application_date")),
+                "Loan type": _safe_text(item.get("loan_type")),
+                "Credit amount": _format_currency(item.get("credit_amount")),
+                "Annuity": _format_currency(item.get("annuity_amount")),
+                "Goods price": _format_currency(item.get("goods_price")),
+                "Status": _safe_text(item.get("status")),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def prediction_history_frame(items: list[dict]) -> pd.DataFrame:
+    if not items:
+        return pd.DataFrame(columns=["Predicted at", "Risk", "Probability", "Loan type", "Credit amount"])
+
+    rows = []
+    for item in items:
+        rows.append(
+            {
+                "Predicted at": _safe_text(item.get("predicted_at")),
+                "Risk": _safe_text(item.get("risk_category")),
+                "Probability": _format_percent(item.get("probability_default")),
+                "Loan type": _safe_text(item.get("loan_type")),
+                "Credit amount": _format_currency(item.get("credit_amount")),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def prediction_list_frame(items: list[dict]) -> pd.DataFrame:
+    if not items:
+        return pd.DataFrame(columns=["Risk", "Probability", "Loan type", "Credit amount", "Predicted at"])
+
+    rows = []
+    for item in items:
+        rows.append(
+            {
+                "Risk": _safe_text(item.get("risk_category")),
+                "Probability": _format_percent(item.get("probability_default")),
+                "Loan type": _safe_text(item.get("loan_type")),
+                "Credit amount": _format_currency(item.get("credit_amount")),
+                "Predicted at": _safe_text(item.get("predicted_at")),
+            }
+        )
+    return pd.DataFrame(rows)
 
 
 def safe_frame(items: list[dict]) -> pd.DataFrame:
@@ -358,7 +476,7 @@ def fetch_all_predictions(max_rows: int = 1000) -> pd.DataFrame:
     page_size = 100
     for offset in range(0, max_rows, page_size):
         response = get_predictions(limit=page_size, offset=offset)
-        items    = response.get("items", [])
+        items = response.get("items", [])
         if not items:
             break
         collected.extend(items)
@@ -367,74 +485,100 @@ def fetch_all_predictions(max_rows: int = 1000) -> pd.DataFrame:
     return safe_frame(collected)
 
 
-# ─── KPI cards ────────────────────────────────────────────────────────────────
-def render_kpi_cards(customers: dict, predictions: dict) -> None:
-    cf = safe_frame(customers.get("items", []))
-    pf = safe_frame(predictions.get("items", []))
+def build_risk_factors(customer: dict, application: dict, probability: float) -> list[str]:
+    factors: list[str] = []
+    income = float(customer.get("income_total", 0) or 0)
+    credit = float(application.get("credit_amount", 0) or 0)
+    annuity = float(application.get("annuity_amount", 0) or 0)
+    family_members = int(customer.get("family_members", 1) or 1)
+    owns_assets = bool(customer.get("owns_car")) or bool(customer.get("owns_realty"))
 
-    total_customers  = int(customers.get("total", 0) or 0)
+    if income and credit / income > 3:
+        factors.append("Requested credit is high compared with household income")
+    if income and annuity / income > 0.3:
+        factors.append("Monthly repayment may feel heavy for this income range")
+    if income < 120_000:
+        factors.append("Household income is below the stronger-risk threshold")
+    if family_members >= 4:
+        factors.append("Larger household size can add repayment pressure")
+    if not owns_assets:
+        factors.append("No registered car or home ownership on file")
+    if probability >= 0.7:
+        factors.append("Current score leans toward higher default risk")
+    elif probability >= 0.35:
+        factors.append("Current score sits in a moderate risk zone")
+    else:
+        factors.append("Current score indicates a steadier repayment profile")
+
+    return factors[:4]
+
+
+def render_kpi_cards(customers: dict, predictions: dict) -> None:
+    customer_frame = safe_frame(customers.get("items", []))
+    prediction_frame = safe_frame(predictions.get("items", []))
+
+    total_customers = int(customers.get("total", 0) or 0)
     total_predictions = int(predictions.get("total", 0) or 0)
-    avg_income = pd.to_numeric(cf.get("income_total", pd.Series(dtype=float)), errors="coerce").mean()
+    avg_income = pd.to_numeric(customer_frame.get("income_total", pd.Series(dtype=float)), errors="coerce").mean()
     avg_income = float(0 if pd.isna(avg_income) else avg_income)
-    avg_prob = pd.to_numeric(pf.get("probability_default", pd.Series(dtype=float)), errors="coerce").mean()
+    avg_prob = pd.to_numeric(prediction_frame.get("probability_default", pd.Series(dtype=float)), errors="coerce").mean()
     avg_prob = float(0 if pd.isna(avg_prob) else avg_prob)
-    high_risk = int((pf.get("risk_category", pd.Series(dtype=str)) == "HIGH_RISK").sum()) if not pf.empty else 0
+    high_risk = int((prediction_frame.get("risk_category", pd.Series(dtype=str)) == "HIGH_RISK").sum()) if not prediction_frame.empty else 0
 
     c1, c2, c3, c4, c5 = st.columns(5)
     with c1:
-        st.metric("Total Customers", f"{total_customers:,}")
+        st.metric("Customers Reviewed", f"{total_customers:,}")
     with c2:
-        st.metric("Total Predictions", f"{total_predictions:,}")
+        st.metric("Predictions Recorded", f"{total_predictions:,}")
     with c3:
-        st.metric("Average Income", f"₹{avg_income:,.0f}")
+        st.metric("Average Income", _format_currency(avg_income))
     with c4:
-        st.metric("Avg Default Prob.", f"{avg_prob * 100:.1f}%")
+        st.metric("Average Risk", _format_percent(avg_prob))
     with c5:
         st.metric("High Risk Cases", f"{high_risk:,}")
 
 
-def render_model_overview(model_info: dict, predictions: dict) -> None:
+def render_model_overview(predictions: dict) -> None:
     prediction_frame = safe_frame(predictions.get("items", []))
     avg_prob = pd.to_numeric(prediction_frame.get("probability_default", pd.Series(dtype=float)), errors="coerce").mean()
     avg_prob = float(0 if pd.isna(avg_prob) else avg_prob)
     high_risk = int((prediction_frame.get("risk_category", pd.Series(dtype=str)) == "HIGH_RISK").sum()) if not prediction_frame.empty else 0
     low_risk = int((prediction_frame.get("risk_category", pd.Series(dtype=str)) == "LOW_RISK").sum()) if not prediction_frame.empty else 0
-    model_name = model_info.get("model_name", "LightGBM")
-    model_version = model_info.get("model_version", "unknown")
-    validation_auc = model_info.get("validation_auc", "N/A")
-    feature_count = model_info.get("feature_count", "N/A")
+    total = int(len(prediction_frame))
 
-    st.markdown('<div class="section-head">Model Information & Analytics</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-head">Risk Insights</div>', unsafe_allow_html=True)
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        st.metric("Model Name", str(model_name))
+        st.metric("Recent Reviews", f"{total:,}")
     with c2:
-        st.metric("Version", str(model_version))
+        st.metric("Average Risk", _format_percent(avg_prob))
     with c3:
-        st.metric("Validation AUC", f"{validation_auc:.3f}" if isinstance(validation_auc, (int, float)) else str(validation_auc))
-    with c4:
-        st.metric("Feature Count", str(feature_count))
-
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.metric("Average Default Probability", f"{avg_prob * 100:.1f}%")
-    with c2:
         st.metric("Low Risk Cases", f"{low_risk:,}")
-    with c3:
+    with c4:
         st.metric("High Risk Cases", f"{high_risk:,}")
 
-    st.caption("Model score summary is computed from the current stored prediction pool.")
+    st.markdown(
+        """
+        <div class="insight-card">
+          <h4>What this page tells you</h4>
+          <p>
+            These figures summarize the latest customer reviews and loan outcomes already saved in the app.
+            They help you spot the balance between safer and higher-risk decisions without exposing any internal system details.
+          </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def render_workflow_panel() -> None:
     st.info(
         """
         **Workflow**
-        1. Open **Make Prediction** and select a customer from PostgreSQL.
-        2. Enter the loan values: credit amount, annuity amount, goods price, and loan type.
-        3. Click **Calculate Risk** to call FastAPI and run the model.
-        4. The prediction is saved in PostgreSQL and shown in **Predictions** and **Analytics**.
-        5. The dashboard reflects live model and risk statistics.
+        1. Open **Make Prediction** and pick a customer profile.
+        2. Enter the loan amount, repayment amount, goods price, and loan type.
+        3. Run the review to see the default probability and recommendation.
+        4. Check the saved results on **Predictions** and **Analytics**.
         """
     )
 
@@ -445,72 +589,72 @@ def render_how_to_use_page() -> None:
         """
         **Step-by-step**
         1. Open **Make Prediction** from the sidebar.
-        2. Choose a customer from the customer list.
+        2. Choose a customer profile from the list.
         3. Fill in the loan amount, repayment amount, goods price, and loan type.
         4. Press **Calculate Risk** to generate the default probability.
-        5. Review the risk badge, recommendation, and stored prediction history.
+        5. Review the summary card and the saved prediction history.
         """
     )
     render_workflow_panel()
 
 
-def render_model_information_page(predictions: dict) -> None:
-    st.markdown('<div class="section-head">Model Information</div>', unsafe_allow_html=True)
-    try:
-        model_info = get_model_info()
-    except Exception as exc:
-        st.error(f"Unable to load model information: {exc}")
-        model_info = {}
-
-    render_model_overview(model_info, predictions)
+def render_insights_page(predictions: dict) -> None:
+    st.markdown('<div class="section-head">Insights</div>', unsafe_allow_html=True)
+    render_model_overview(predictions)
 
     st.markdown('<div class="ind-divider"></div>', unsafe_allow_html=True)
-    st.markdown('<div class="section-head">Model Notes</div>', unsafe_allow_html=True)
-    st.info(
+    st.markdown(
         """
-        This app uses the trained LightGBM pipeline loaded from the backend model artifact.
-        The analytics below are computed from the predictions already stored in PostgreSQL.
-        """
+        <div class="insight-card">
+          <h4>Helpful context</h4>
+          <p>
+            This workspace focuses on customer-facing summaries, not system internals. The charts and tables
+            below are based on the latest stored customer and prediction records.
+          </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
 
-# ─── Charts ───────────────────────────────────────────────────────────────────
-def render_bar(frame: pd.DataFrame, column: str, title: str, color: str = AMBER) -> None:
+def render_bar(frame: pd.DataFrame, column: str, title: str, color: str = PRIMARY) -> None:
     _apply_chart_theme()
     if frame.empty or column not in frame.columns:
         st.info(f"No data for {title.lower()}.")
         return
+
     counts = frame[column].fillna("Unknown").astype(str).value_counts().head(8)
-    fig, ax = plt.subplots(figsize=(7, 3.8))
-    bars = counts.sort_values().plot(kind="barh", ax=ax, color=color)
+    fig, ax = plt.subplots(figsize=(7.2, 3.8))
+    counts.sort_values().plot(kind="barh", ax=ax, color=color)
     ax.set_title(title, pad=10)
     ax.set_xlabel("Count")
     ax.tick_params(axis="y", labelsize=8)
-    ax.grid(axis="x", alpha=0.15)
-    # accent spine
+    ax.grid(axis="x", alpha=0.18)
     for spine in ax.spines.values():
-        spine.set_edgecolor(GIRDER)
+        spine.set_edgecolor(BORDER)
     ax.spines["left"].set_edgecolor(color)
     ax.spines["left"].set_linewidth(2)
     fig.tight_layout()
     st.pyplot(fig, clear_figure=True)
 
 
-def render_histogram(frame: pd.DataFrame, column: str, title: str, color: str = "#14b8a6") -> None:
+def render_histogram(frame: pd.DataFrame, column: str, title: str, color: str = SECONDARY) -> None:
     _apply_chart_theme()
     if frame.empty or column not in frame.columns:
         st.info(f"No data for {title.lower()}.")
         return
+
     values = pd.to_numeric(frame[column], errors="coerce").dropna()
     if values.empty:
         st.info(f"No numeric values for {title.lower()}.")
         return
-    fig, ax = plt.subplots(figsize=(7, 3.8))
-    ax.hist(values, bins=18, color=color, edgecolor=STEEL, alpha=0.88, linewidth=0.6)
+
+    fig, ax = plt.subplots(figsize=(7.2, 3.8))
+    ax.hist(values, bins=18, color=color, edgecolor="#ffffff", alpha=0.9, linewidth=0.8)
     ax.set_title(title, pad=10)
     ax.set_xlabel(column.replace("_", " ").title())
     ax.set_ylabel("Frequency")
-    ax.grid(axis="y", alpha=0.15)
+    ax.grid(axis="y", alpha=0.18)
     ax.spines["bottom"].set_edgecolor(color)
     ax.spines["bottom"].set_linewidth(2)
     fig.tight_layout()
@@ -522,24 +666,25 @@ def render_prediction_distribution(prediction_frame: pd.DataFrame) -> None:
     if prediction_frame.empty or "risk_category" not in prediction_frame.columns:
         st.info("No prediction data available yet.")
         return
+
     counts = prediction_frame["risk_category"].fillna("UNKNOWN").value_counts()
-    fig, ax = plt.subplots(figsize=(5, 3.8))
-    wedge_colors = [GREEN, AMBER, RED]
+    fig, ax = plt.subplots(figsize=(5.4, 3.8))
+    wedge_colors = ["#14b8a6", "#f59e0b", "#e85c70"]
     wedges, texts, autotexts = ax.pie(
         counts,
         labels=counts.index,
         autopct="%1.1f%%",
         startangle=90,
         colors=wedge_colors[: len(counts)],
-        wedgeprops={"edgecolor": STEEL, "linewidth": 2},
+        wedgeprops={"edgecolor": "#ffffff", "linewidth": 2},
     )
-    for t in texts:
-        t.set_fontsize(8)
-        t.set_color(SILVER)
-    for at in autotexts:
-        at.set_fontsize(8)
-        at.set_color(STEEL)
-        at.set_fontweight("bold")
+    for text in texts:
+        text.set_fontsize(8)
+        text.set_color(TEXT)
+    for text in autotexts:
+        text.set_fontsize(8)
+        text.set_color("#213047")
+        text.set_fontweight("bold")
     ax.set_title("Risk Category Share", pad=10)
     fig.tight_layout()
     st.pyplot(fig, clear_figure=True)
@@ -550,40 +695,43 @@ def render_probability_trend(prediction_frame: pd.DataFrame) -> None:
     if prediction_frame.empty or "probability_default" not in prediction_frame.columns:
         st.info("No trend data yet.")
         return
+
     values = pd.to_numeric(prediction_frame["probability_default"], errors="coerce").dropna()
     if values.empty:
+        st.info("No trend data yet.")
         return
-    fig, ax = plt.subplots(figsize=(7, 3.8))
+
+    fig, ax = plt.subplots(figsize=(7.2, 3.8))
     ax.fill_between(range(1, len(values) + 1), values * 100, alpha=0.12, color=VIOLET)
     ax.plot(range(1, len(values) + 1), values * 100, linewidth=2, color=VIOLET, marker="o", markersize=3)
-    ax.axhline(y=50, color=RED, linewidth=0.8, linestyle="--", alpha=0.5, label="50% threshold")
+    ax.axhline(y=50, color=RISK, linewidth=0.9, linestyle="--", alpha=0.55, label="50% threshold")
     ax.set_title("Prediction Probability Trend", pad=10)
     ax.set_xlabel("Prediction Index")
     ax.set_ylabel("Default Probability (%)")
     ax.set_ylim(0, max(100, float(values.max() * 100) + 5))
-    ax.legend(fontsize=7, framealpha=0, labelcolor=GHOST)
-    ax.grid(alpha=0.12)
+    ax.legend(fontsize=7, framealpha=0, labelcolor=MUTED)
+    ax.grid(alpha=0.14)
     ax.spines["left"].set_edgecolor(VIOLET)
     ax.spines["left"].set_linewidth(2)
     fig.tight_layout()
     st.pyplot(fig, clear_figure=True)
 
 
-# ─── Login ────────────────────────────────────────────────────────────────────
 def login_screen() -> None:
     st.markdown(_GLOBAL_CSS, unsafe_allow_html=True)
     st.markdown(
         """
         <div class="login-plate">
-          <div class="login-title">Bank <span>Risk</span></div>
-          <div class="login-sub">Loan Assessment System · v2.4</div>
+          <div class="login-title">Bank <span>Loan</span> Insight</div>
+          <div class="login-sub">Secure customer review workspace for loan checks and predictions.</div>
         </div>
         """,
         unsafe_allow_html=True,
     )
+
     with st.form("login_form"):
-        username  = st.text_input("Username")
-        password  = st.text_input("Password", type="password")
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
         submitted = st.form_submit_button("Authenticate")
 
     if submitted:
@@ -592,13 +740,12 @@ def login_screen() -> None:
             st.session_state.username = username
             st.rerun()
         else:
-            st.error("Access denied — invalid credentials.")
+            st.error("Access denied. Invalid credentials.")
 
 
-# ─── Pages ────────────────────────────────────────────────────────────────────
 def render_dashboard_page(customers: dict, predictions: dict) -> None:
-    customer_frame    = safe_frame(customers.get("items", []))
-    prediction_frame  = safe_frame(predictions.get("items", []))
+    customer_frame = safe_frame(customers.get("items", []))
+    prediction_frame = safe_frame(predictions.get("items", []))
 
     render_kpi_cards(customers, predictions)
 
@@ -606,16 +753,16 @@ def render_dashboard_page(customers: dict, predictions: dict) -> None:
 
     c1, c2 = st.columns(2)
     with c1:
-        st.markdown('<div class="section-head">Gender Distribution</div>', unsafe_allow_html=True)
-        render_bar(customer_frame, "gender", "Customer Gender Mix", color=AMBER)
+        st.markdown('<div class="section-head">Household Mix</div>', unsafe_allow_html=True)
+        render_bar(customer_frame, "gender", "Customer Gender Mix", color=PRIMARY)
     with c2:
         st.markdown('<div class="section-head">Income Spread</div>', unsafe_allow_html=True)
-        render_histogram(customer_frame, "income_total", "Income Distribution", color="#14b8a6")
+        render_histogram(customer_frame, "income_total", "Income Distribution", color=SECONDARY)
 
     c1, c2 = st.columns(2)
     with c1:
         st.markdown('<div class="section-head">Education Mix</div>', unsafe_allow_html=True)
-        render_bar(customer_frame, "education_type", "Education Type", color="#f97316")
+        render_bar(customer_frame, "education_type", "Education Type", color=GOLD)
     with c2:
         st.markdown('<div class="section-head">Occupation Mix</div>', unsafe_allow_html=True)
         render_bar(customer_frame, "occupation_type", "Occupation Type", color=VIOLET)
@@ -636,15 +783,16 @@ def render_dashboard_page(customers: dict, predictions: dict) -> None:
 
     st.markdown('<div class="section-head">Recent Predictions</div>', unsafe_allow_html=True)
     if not prediction_frame.empty:
-        st.dataframe(prediction_frame, use_container_width=True, hide_index=True)
+        st.dataframe(prediction_list_frame(prediction_frame.to_dict("records")), use_container_width=True, hide_index=True)
     else:
         st.info("No predictions stored yet.")
 
 
 def render_customers_page(customers: dict) -> str | None:
     st.markdown('<div class="section-head">Customer Search</div>', unsafe_allow_html=True)
-    search   = st.text_input("Search by Customer ID or Attribute", value="")
-    st.caption("Queries filter live from PostgreSQL.")
+    search = st.text_input("Search customers", value="", placeholder="Search by gender, occupation, education, family, or housing")
+    st.caption("Browse the customer profiles that match your search.")
+
     filtered = get_customers(query=search or None, limit=100, offset=0)
     render_customer_table(filtered.get("items", []))
 
@@ -652,17 +800,18 @@ def render_customers_page(customers: dict) -> str | None:
     if not items:
         return None
 
-    selected = st.selectbox(
-        "Select customer for detailed view",
-        [str(item["customer_id"]) for item in items],
+    selected_index = st.selectbox(
+        "Select a customer profile",
+        options=list(range(len(items))),
+        format_func=lambda index: customer_display_label(items[index]),
     )
-    return selected
+    return str(items[int(selected_index)]["customer_id"])
 
 
-def render_customer_detail_page(customer_id: str | None) -> None:
+def render_customer_detail_page(customer_id: str | None, predictions: dict | None = None) -> None:
     choices = get_customers(limit=100, offset=0).get("items", [])
     if not choices:
-        st.warning("No customer rows found. Seed the customers table first.")
+        st.warning("No customer rows found. Seed the customer list first.")
         return
 
     if customer_id is None:
@@ -671,39 +820,54 @@ def render_customer_detail_page(customer_id: str | None) -> None:
     selected = get_customer(customer_id)
     customer = selected["customer"]
 
-    left, right = st.columns([1, 1])
+    left, right = st.columns([1, 1.05])
 
     with left:
         st.markdown('<div class="section-head">Customer Profile</div>', unsafe_allow_html=True)
-        st.json(customer)
+        st.dataframe(customer_detail_frame(customer), use_container_width=True, hide_index=True)
+
         st.markdown('<div class="section-head">Recent Applications</div>', unsafe_allow_html=True)
-        st.dataframe(pd.DataFrame(selected.get("recent_applications", [])), use_container_width=True, hide_index=True)
+        application_frame = application_history_frame(selected.get("recent_applications", []))
+        if application_frame.empty:
+            st.info("No recent applications yet.")
+        else:
+            st.dataframe(application_frame, use_container_width=True, hide_index=True)
+
         st.markdown('<div class="section-head">Previous Predictions</div>', unsafe_allow_html=True)
-        st.dataframe(pd.DataFrame(selected.get("recent_predictions", [])), use_container_width=True, hide_index=True)
+        prediction_frame = prediction_history_frame(selected.get("recent_predictions", []))
+        if prediction_frame.empty and predictions:
+            prediction_frame = prediction_history_frame(
+                [item for item in predictions.get("items", []) if str(item.get("customer_id")) == str(customer_id)]
+            )
+        if prediction_frame.empty:
+            st.info("No previous predictions yet.")
+        else:
+            st.dataframe(prediction_frame, use_container_width=True, hide_index=True)
 
     with right:
         st.markdown('<div class="section-head">Make Prediction</div>', unsafe_allow_html=True)
+        st.caption("Adjust the loan details to review the current customer profile.")
         defaults = {
-            "credit_amount":  227_520.0,
-            "annuity_amount":  13_189.5,
-            "goods_price":    180_000.0,
-            "loan_type":      "Cash loans",
+            "credit_amount": 227_520.0,
+            "annuity_amount": 13_189.5,
+            "goods_price": 180_000.0,
+            "loan_type": "Cash loans",
         }
         with st.form("risk_form"):
-            credit_amount  = st.number_input("Credit Amount",  min_value=1.0, value=defaults["credit_amount"],  step=1000.0)
+            credit_amount = st.number_input("Credit Amount", min_value=1.0, value=defaults["credit_amount"], step=1000.0)
             annuity_amount = st.number_input("Annuity Amount", min_value=1.0, value=defaults["annuity_amount"], step=100.0)
-            goods_price    = st.number_input("Goods Price",    min_value=1.0, value=defaults["goods_price"],    step=1000.0)
-            loan_type      = st.selectbox("Loan Type", ["Cash loans", "Revolving loans", "Consumer loans"])
-            calculate      = st.form_submit_button("Calculate Risk")
+            goods_price = st.number_input("Goods Price", min_value=1.0, value=defaults["goods_price"], step=1000.0)
+            loan_type = st.selectbox("Loan Type", ["Cash loans", "Revolving loans", "Consumer loans"])
+            calculate = st.form_submit_button("Calculate Risk")
 
         if calculate:
             payload = {
-                "credit_amount":  credit_amount,
+                "credit_amount": credit_amount,
                 "annuity_amount": annuity_amount,
-                "goods_price":    goods_price,
-                "loan_type":      loan_type,
+                "goods_price": goods_price,
+                "loan_type": loan_type,
             }
-            result  = predict_customer(customer_id, payload)
+            result = predict_customer(customer_id, payload)
             factors = build_risk_factors(customer, payload, float(result["probability_default"]))
             render_prediction_result(result, factors)
 
@@ -715,7 +879,7 @@ def render_predictions_page() -> None:
     if not items:
         st.info("No predictions stored yet.")
         return
-    st.dataframe(pd.DataFrame(items), use_container_width=True, hide_index=True)
+    st.dataframe(prediction_list_frame(items), use_container_width=True, hide_index=True)
 
 
 def render_analytics_page() -> None:
@@ -725,16 +889,15 @@ def render_analytics_page() -> None:
         st.info("Run a few risk checks first to populate analytics.")
         return
 
-    counts   = predictions["risk_category"].fillna("UNKNOWN").value_counts().rename_axis("risk_category").reset_index(name="count")
     avg_prob = pd.to_numeric(predictions["probability_default"], errors="coerce").mean()
     avg_prob = float(0 if pd.isna(avg_prob) else avg_prob)
     high_risk = int((predictions["risk_category"] == "HIGH_RISK").sum())
 
     c1, c2 = st.columns(2)
     with c1:
-        st.metric("Average Default Probability", f"{avg_prob * 100:.1f}%")
+        st.metric("Average Default Probability", _format_percent(avg_prob))
     with c2:
-        st.metric("High Risk Cases", high_risk)
+        st.metric("High Risk Cases", f"{high_risk:,}")
 
     c1, c2 = st.columns(2)
     with c1:
@@ -742,14 +905,13 @@ def render_analytics_page() -> None:
         render_prediction_distribution(predictions)
     with c2:
         st.markdown('<div class="section-head">Probability Histogram</div>', unsafe_allow_html=True)
-        render_histogram(predictions, "probability_default", "Default Probability Distribution", color=RED)
+        render_histogram(predictions, "probability_default", "Default Probability Distribution", color=RISK)
 
 
-# ─── Entry point ──────────────────────────────────────────────────────────────
 def main() -> None:
     st.set_page_config(
-        page_title="Loan Risk Assessment",
-        page_icon="⬡",
+        page_title="Bank Loan Insight",
+        page_icon="L",
         layout="wide",
         initial_sidebar_state="expanded",
     )
@@ -759,34 +921,24 @@ def main() -> None:
         login_screen()
         return
 
-    # Hero banner
     st.markdown(
         """
         <div class="hero-banner">
-          <div class="hero-title">Bank <span>Loan</span> Risk Engine</div>
-          <div class="hero-sub">FastAPI · PostgreSQL · ML Prediction Pipeline</div>
-          <div class="hero-status">● System Nominal</div>
+          <div class="hero-title">Bank <span>Loan</span> Insight</div>
+          <div class="hero-sub">Personal customer reviews, loan checks, and prediction summaries in one calm, easy-to-read workspace.</div>
+          <div class="hero-status">Live workspace ready</div>
         </div>
         """,
         unsafe_allow_html=True,
     )
-
-    try:
-        health = get_health()
-        db_health = get_db_health()
-        api_status = health.get("status", "unknown")
-        db_status = db_health.get("status", "unknown")
-        st.caption(f"API: {api_status}  ·  DB: {db_status}")
-    except Exception:
-        st.caption("API health check failed — backend may be offline.")
 
     page = render_navigation()
 
     try:
         customers = get_customers(limit=100, offset=0)
         predictions = get_predictions(limit=100, offset=0)
-    except Exception as exc:
-        st.error(f"Unable to reach the backend API: {exc}")
+    except Exception:
+        st.error("We could not load the latest customer and prediction records right now.")
         return
 
     if page == "Dashboard":
@@ -796,15 +948,15 @@ def main() -> None:
     elif page == "Make Prediction":
         selected = render_customers_page(customers)
         st.markdown('<div class="ind-divider"></div>', unsafe_allow_html=True)
-        render_customer_detail_page(selected)
+        render_customer_detail_page(selected, predictions)
     elif page == "Predictions":
         render_predictions_page()
     elif page == "Analytics":
         render_analytics_page()
     elif page == "How to Use":
         render_how_to_use_page()
-    elif page == "Model Information":
-        render_model_information_page(predictions)
+    elif page == "Insights":
+        render_insights_page(predictions)
 
 
 if __name__ == "__main__":
