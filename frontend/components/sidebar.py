@@ -1,4 +1,4 @@
-# updating sidebar
+# sidebar.py  – fixed mobile hamburger
 from __future__ import annotations
 
 import streamlit as st
@@ -34,11 +34,6 @@ _SIDEBAR_CSS = """
 }
 
 [data-testid="stSidebar"] .stRadio label:hover {
-    color: #1d4ed8 !important;
-}
-
-[data-testid="stSidebar"] .stRadio [data-checked="true"] + div label,
-[data-testid="stSidebar"] .stRadio [aria-checked="true"] + div {
     color: #1d4ed8 !important;
 }
 
@@ -90,16 +85,23 @@ _SIDEBAR_CSS = """
 }
 
 
-/* ─── DESKTOP  (>= 768 px) — keep the existing arrow-based behaviour ──────── */
+/* ════════════════════════════════════════════════════════════════════════════
+   DESKTOP  (≥ 768 px)
+   ════════════════════════════════════════════════════════════════════════════ */
 
 @media (min-width: 768px) {
+
+    /* Hide the top toolbar entirely on desktop — we use the sidebar arrow */
+    [data-testid="stHeader"] {
+        display: none !important;
+    }
 
     [data-testid="stSidebar"][aria-expanded="false"] {
         min-width: 54px !important;
         max-width: 54px !important;
-        width: 54px !important;
+        width:     54px !important;
         transform: none !important;
-        overflow: visible !important;
+        overflow:  visible !important;
     }
 
     [data-testid="stSidebar"][aria-expanded="false"] [data-testid="stSidebarContent"] {
@@ -114,7 +116,6 @@ _SIDEBAR_CSS = """
         margin-bottom: 0 !important;
     }
 
-    /* Hide all sidebar body content when collapsed on desktop */
     [data-testid="stSidebar"][aria-expanded="false"] [data-testid="stLogoSpacer"],
     [data-testid="stSidebar"][aria-expanded="false"] [data-testid="stSidebarLogo"],
     [data-testid="stSidebar"][aria-expanded="false"] [data-testid="stSidebarNav"],
@@ -122,15 +123,19 @@ _SIDEBAR_CSS = """
         display: none !important;
     }
 
-    /* Arrow-toggle button — always visible on desktop */
     [data-testid="stSidebarCollapseButton"],
     [data-testid="collapsedControl"] {
         visibility: visible !important;
+        opacity: 1 !important;
+        width: auto !important;
+        height: auto !important;
+        position: static !important;
+        z-index: auto !important;
+        overflow: visible !important;
     }
 
     [data-testid="stSidebar"][aria-expanded="false"] [data-testid="stSidebarCollapseButton"] {
         display: flex !important;
-        visibility: visible !important;
         align-items: center !important;
         justify-content: center !important;
         margin-left: 0 !important;
@@ -150,232 +155,202 @@ _SIDEBAR_CSS = """
     [data-testid="stSidebar"][aria-expanded="false"] [data-testid="stSidebarCollapseButton"] svg {
         transform: rotate(180deg);
     }
+
+    /* Hide our custom mobile widgets on desktop */
+    #mobile-hamburger-btn,
+    #mobile-sidebar-backdrop {
+        display: none !important;
+    }
 }
 
 
-/* ─── MOBILE  (< 768 px) — hamburger overlay sidebar ─────────────────────── */
+/* ════════════════════════════════════════════════════════════════════════════
+   MOBILE  (< 768 px)
+   ════════════════════════════════════════════════════════════════════════════ */
 
 @media (max-width: 767px) {
 
-    .main .block-container {
-        padding-left: 1rem !important;
-        padding-right: 1rem !important;
-        padding-top: 4rem !important;
+    /* ── 1. Streamlit's top header bar
+            Make it visible but style it to match our theme.
+            This bar contains Streamlit's own hamburger/menu button.          */
+    [data-testid="stHeader"] {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        z-index: 1200 !important;
+        height: 3.25rem !important;
+        min-height: 3.25rem !important;
+        background: #ffffff !important;
+        border-bottom: 1px solid #d8e5f4 !important;
+        box-shadow: 0 2px 12px rgba(15, 23, 42, 0.08) !important;
+        align-items: center !important;
+        padding: 0 12px !important;
     }
 
-    /* your existing mobile sidebar styles below */
-    [data-testid="stSidebar"] {
-        ...
+    /* ── 2. The toolbar button row inside the header
+            Make sure none of it is clipped or hidden.                        */
+    [data-testid="stHeader"] > *,
+    [data-testid="stHeader"] button,
+    [data-testid="stHeader"] [data-testid="stToolbar"],
+    [data-testid="stToolbarActions"] {
+        visibility: visible !important;
+        opacity: 1 !important;
+        display: flex !important;
+        pointer-events: auto !important;
     }
 
-    /* Sidebar slides in from the left as an overlay; hidden by default */
+    /* ── 3. The specific "open sidebar" button that lives in the header.
+            Both selector variants cover different Streamlit versions.        */
+    [data-testid="stSidebarNavButton"],
+    button[aria-label*="sidebar"],
+    button[aria-label*="Sidebar"],
+    button[kind="header"] {
+        visibility: visible !important;
+        opacity: 1 !important;
+        display: flex !important;
+        pointer-events: auto !important;
+        width: 2.5rem !important;
+        height: 2.5rem !important;
+        min-width: 2.5rem !important;
+        min-height: 2.5rem !important;
+        border-radius: 10px !important;
+        background: transparent !important;
+        border: none !important;
+        align-items: center !important;
+        justify-content: center !important;
+        cursor: pointer !important;
+    }
+
+    button[data-testid="stSidebarNavButton"]:hover,
+    button[aria-label*="sidebar"]:hover {
+        background: #dbeafe !important;
+    }
+
+    /* ── 4. The old collapse-button approach — hide it on mobile
+            (the header bar's button is the canonical toggle here)            */
+    [data-testid="stSidebarCollapseButton"],
+    [data-testid="collapsedControl"] {
+        display: none !important;
+    }
+
+    /* ── 5. Sidebar overlay behaviour (unchanged from before) */
     [data-testid="stSidebar"] {
         position: fixed !important;
         top: 0 !important;
         left: 0 !important;
         height: 100dvh !important;
-
         width: 85vw !important;
         max-width: 340px !important;
         min-width: 280px !important;
-
         z-index: 1100 !important;
         transform: translateX(-100%) !important;
         transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1) !important;
         box-shadow: none !important;
     }
 
-    /* When Streamlit expands the sidebar, slide it into view */
     [data-testid="stSidebar"][aria-expanded="true"] {
         transform: translateX(0) !important;
         box-shadow: 4px 0 32px rgba(15, 23, 42, 0.18) !important;
     }
 
-    /* Dim backdrop rendered behind the open sidebar */
-    [data-testid="stSidebar"][aria-expanded="true"]::after {
-        content: "";
-        position: fixed;
-        inset: 0;
-        left: 82vw;
-        max-left: 300px;
-        background: rgba(15, 23, 42, 0.35);
-        backdrop-filter: blur(2px);
-        z-index: -1;
+    /* ── 6. Push main content below the fixed header */
+    .main .block-container {
+        padding-top: 4.5rem !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
     }
 
-    /* Keep Streamlit toggle available for JS but invisible */
-    [data-testid="stSidebarCollapseButton"],
-    [data-testid="collapsedControl"] {
-        opacity: 0 !important;
-        position: fixed !important;
-        top: 10px !important;
-        left: 10px !important;
-        width: 1px !important;
-        height: 1px !important;
-        overflow: hidden !important;
-        z-index: -1 !important;
-    }
-
-    /* Hamburger button — fixed to top-left of the page, always visible */
-    #mobile-hamburger-btn {
-        display: flex !important;
-        position: fixed;
-        top: 14px;
-        left: 14px;
-        z-index: 1200;
-        width: 42px;
-        height: 42px;
-        border-radius: 12px;
-        background: #ffffff;
-        border: 1px solid #bfd4ee;
-        box-shadow: 0 4px 16px rgba(15, 23, 42, 0.12);
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: background 0.18s ease, box-shadow 0.18s ease;
-        flex-direction: column;
-        gap: 5px;
-        padding: 10px;
-    }
-
-    #mobile-hamburger-btn:hover {
-        background: #dbeafe;
-        box-shadow: 0 6px 20px rgba(47, 111, 237, 0.18);
-    }
-
-    #mobile-hamburger-btn span {
-        display: block;
-        width: 20px;
-        height: 2px;
-        background: #1d4ed8;
-        border-radius: 2px;
-        transition: transform 0.22s ease, opacity 0.22s ease;
-    }
-
-    /* Animate hamburger → X when sidebar is open */
-    #mobile-hamburger-btn.is-open span:nth-child(1) {
-        transform: translateY(7px) rotate(45deg);
-    }
-    #mobile-hamburger-btn.is-open span:nth-child(2) {
-        opacity: 0;
-        transform: scaleX(0);
-    }
-    #mobile-hamburger-btn.is-open span:nth-child(3) {
-        transform: translateY(-7px) rotate(-45deg);
-    }
-
-    /* Transparent full-screen close area when sidebar is open */
+    /* ── 7. Backdrop for closing sidebar on outside tap */
     #mobile-sidebar-backdrop {
         display: none;
-        position: fixed;
-        inset: 0;
-        z-index: 1050;
-        background: transparent;
+        position: fixed !important;
+        inset: 0 !important;
+        z-index: 1050 !important;
+        background: rgba(15, 23, 42, 0.35) !important;
+        backdrop-filter: blur(2px) !important;
     }
 
     #mobile-sidebar-backdrop.is-open {
-        display: block;
+        display: block !important;
     }
-}
 
-/* Hide hamburger on desktop */
-@media (min-width: 768px) {
+    /* Hide custom hamburger on mobile — we use the native header button */
     #mobile-hamburger-btn {
-        display: none !important;
-    }
-    #mobile-sidebar-backdrop {
         display: none !important;
     }
 }
 </style>
 
-<!-- ── Mobile hamburger button (only visible on small screens via CSS) ──── -->
-<div id="mobile-hamburger-btn" aria-label="Open navigation" role="button" tabindex="0">
-    <span></span>
-    <span></span>
-    <span></span>
-</div>
-
-<!-- Transparent backdrop to catch outside-click closes -->
+<!-- Backdrop overlay so tapping outside the sidebar closes it -->
 <div id="mobile-sidebar-backdrop"></div>
 
 <script>
 (function () {
-    // Wait for Streamlit's DOM to stabilise
+    var backdrop = null;
+
+    function getSidebar() {
+        return document.querySelector('[data-testid="stSidebar"]');
+    }
+
+    function isOpen() {
+        var sb = getSidebar();
+        return sb ? sb.getAttribute('aria-expanded') === 'true' : false;
+    }
+
+    function syncBackdrop() {
+        if (!backdrop) return;
+        if (isOpen()) {
+            backdrop.classList.add('is-open');
+        } else {
+            backdrop.classList.remove('is-open');
+        }
+    }
+
+    function closeIfOpen() {
+        if (!isOpen()) return;
+        /* Find and click whichever toggle button Streamlit rendered */
+        var btn = (
+            document.querySelector('button[data-testid="stSidebarNavButton"]') ||
+            document.querySelector('[data-testid="stHeader"] button[aria-label*="sidebar"]') ||
+            document.querySelector('[data-testid="stHeader"] button[aria-label*="Sidebar"]') ||
+            document.querySelector('[data-testid="stHeader"] button[kind="header"]') ||
+            document.querySelector('[data-testid="stSidebarCollapseButton"] button') ||
+            document.querySelector('[data-testid="collapsedControl"] button')
+        );
+        if (btn) btn.click();
+    }
+
     function init() {
-        var hamburger = document.getElementById('mobile-hamburger-btn');
-        var backdrop  = document.getElementById('mobile-sidebar-backdrop');
+        backdrop = document.getElementById('mobile-sidebar-backdrop');
+        if (!backdrop) { setTimeout(init, 100); return; }
 
-        if (!hamburger || !backdrop) {
-            setTimeout(init, 120);
-            return;
-        }
-
-        function getSidebar() {
-            return document.querySelector('[data-testid="stSidebar"]');
-        }
-
-        function isOpen() {
-            var sb = getSidebar();
-            return sb && sb.getAttribute('aria-expanded') === 'true';
-        }
-
-        function openSidebar() {
-            // Trigger Streamlit's own collapse button to toggle state
-            var btn = document.querySelector('[data-testid="stSidebarCollapseButton"] button')
-                   || document.querySelector('[data-testid="collapsedControl"] button');
-            if (btn) btn.click();
-        }
-
-        function syncUI() {
-            if (isOpen()) {
-                hamburger.classList.add('is-open');
-                backdrop.classList.add('is-open');
-            } else {
-                hamburger.classList.remove('is-open');
-                backdrop.classList.remove('is-open');
-            }
-        }
-
-        // Hamburger click
-        hamburger.addEventListener('click', function () {
-            openSidebar();
-            setTimeout(syncUI, 60);
-        });
-
-        // Keyboard accessibility
-        hamburger.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                openSidebar();
-                setTimeout(syncUI, 60);
-            }
-        });
-
-        // Backdrop click closes sidebar
         backdrop.addEventListener('click', function () {
-            if (isOpen()) {
-                openSidebar(); // toggles it off
-                setTimeout(syncUI, 60);
-            }
+            closeIfOpen();
+            setTimeout(syncBackdrop, 80);
         });
 
-        // Keep hamburger icon in sync whenever Streamlit re-renders
-        var observer = new MutationObserver(syncUI);
-        var target = getSidebar();
-        if (target) {
-            observer.observe(target, { attributes: true, attributeFilter: ['aria-expanded'] });
-        }
+        /* Watch aria-expanded so backdrop tracks sidebar state */
+        var observer = new MutationObserver(syncBackdrop);
+        var sb = getSidebar();
+        if (sb) observer.observe(sb, { attributes: true, attributeFilter: ['aria-expanded'] });
 
-        // Initial sync
-        syncUI();
+        /* Re-wire after Streamlit re-renders */
+        new MutationObserver(function () {
+            var sb2 = getSidebar();
+            if (sb2) observer.observe(sb2, { attributes: true, attributeFilter: ['aria-expanded'] });
+            syncBackdrop();
+        }).observe(document.body, { childList: true, subtree: false });
+
+        syncBackdrop();
     }
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
-    }
+    document.readyState === 'loading'
+        ? document.addEventListener('DOMContentLoaded', init)
+        : init();
 })();
 </script>
 """
@@ -399,7 +374,5 @@ def render_navigation() -> str:
         )
 
         st.markdown('<div class="sidebar-divider"></div>', unsafe_allow_html=True)
-
-    
 
     return page
