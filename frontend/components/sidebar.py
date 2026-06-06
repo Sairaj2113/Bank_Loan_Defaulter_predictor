@@ -400,9 +400,6 @@ def render_navigation() -> str:
 
         st.markdown('<div class="sidebar-divider"></div>', unsafe_allow_html=True)
 
-        if st.button("Logout"):
-            st.session_state.authenticated = False
-            st.session_state.username = ""
-            st.rerun()
+    
 
     return page
