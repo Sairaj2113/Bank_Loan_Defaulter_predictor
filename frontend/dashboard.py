@@ -800,7 +800,8 @@ def render_customers_page(customers: dict) -> str | None:
     search = st.text_input("Search customers", value="", placeholder="Search by gender, occupation, education, family, or housing")
     st.caption("Browse the customer profiles that match your search.")
 
-    filtered = get_customers(query=search or None, limit=100, offset=0)
+    with st.spinner("Searching customers…"):
+        filtered = get_customers(query=search or None, limit=100, offset=0)
     render_customer_table(filtered.get("items", []))
 
     items = filtered.get("items", [])
@@ -824,7 +825,8 @@ def render_customer_detail_page(customer_id: str | None, predictions: dict | Non
     if customer_id is None:
         customer_id = str(choices[0]["customer_id"])
 
-    selected = get_customer(customer_id)
+    with st.spinner("Loading customer profile…"):
+        selected = get_customer(customer_id)
     customer = selected["customer"]
 
     left, right = st.columns([1, 1.05])
@@ -874,14 +876,16 @@ def render_customer_detail_page(customer_id: str | None, predictions: dict | Non
                 "goods_price": goods_price,
                 "loan_type": loan_type,
             }
-            result = predict_customer(customer_id, payload)
+            with st.spinner("Calculating risk…"):
+                result = predict_customer(customer_id, payload)
             factors = build_risk_factors(customer, payload, float(result["probability_default"]))
             render_prediction_result(result, factors)
 
 
 def render_predictions_page() -> None:
     st.markdown('<div class="section-head">All Stored Predictions</div>', unsafe_allow_html=True)
-    predictions = get_predictions(limit=100, offset=0)
+    with st.spinner("Loading predictions…"):
+        predictions = get_predictions(limit=100, offset=0)
     items = predictions.get("items", [])
     if not items:
         st.info("No predictions stored yet.")
@@ -891,7 +895,8 @@ def render_predictions_page() -> None:
 
 def render_analytics_page() -> None:
     st.markdown('<div class="section-head">Prediction Analytics</div>', unsafe_allow_html=True)
-    predictions = fetch_all_predictions()
+    with st.spinner("Loading analytics data…"):
+        predictions = fetch_all_predictions()
     if predictions.empty:
         st.info("Run a few risk checks first to populate analytics.")
         return
@@ -924,10 +929,6 @@ def main() -> None:
     )
     st.markdown(_GLOBAL_CSS, unsafe_allow_html=True)
 
-    if not st.session_state.get("authenticated"):
-        login_screen()
-        return
-
     st.markdown(
         """
         <div class="hero-banner">
@@ -942,8 +943,10 @@ def main() -> None:
     page = render_navigation()
 
     try:
-        customers = get_customers(limit=100, offset=0)
-        predictions = get_predictions(limit=100, offset=0)
+        with st.spinner("Loading customers…"):
+            customers = get_customers(limit=100, offset=0)
+        with st.spinner("Loading predictions…"):
+            predictions = get_predictions(limit=100, offset=0)
     except Exception:
         st.error("We could not load the latest customer and prediction records right now.")
         return
@@ -965,7 +968,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    if "authenticated" not in st.session_state:
-        st.session_state.authenticated = False
-        st.session_state.username = ""
     main()

@@ -11,6 +11,14 @@ _SIDEBAR_CSS = """
     border-right: 1px solid #d8e5f4 !important;
 }
 
+[data-testid="stSidebar"][aria-expanded="false"] {
+    min-width: 54px !important;
+    max-width: 54px !important;
+    width: 54px !important;
+    transform: none !important;
+    overflow: visible !important;
+}
+
 [data-testid="stSidebar"]::before {
     content: "";
     display: block;
@@ -18,6 +26,53 @@ _SIDEBAR_CSS = """
     top: 0; left: 0; right: 0;
     height: 4px;
     background: linear-gradient(90deg, #38bdf8 0%, #14b8a6 50%, #60a5fa 100%);
+}
+
+[data-testid="stSidebar"][aria-expanded="false"] [data-testid="stSidebarContent"] {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+    overflow: hidden !important;
+}
+
+[data-testid="stSidebar"][aria-expanded="false"] [data-testid="stSidebarHeader"] {
+    justify-content: center !important;
+    height: 64px !important;
+    margin-bottom: 0 !important;
+}
+
+[data-testid="stSidebar"][aria-expanded="false"] [data-testid="stLogoSpacer"],
+[data-testid="stSidebar"][aria-expanded="false"] [data-testid="stSidebarLogo"],
+[data-testid="stSidebar"][aria-expanded="false"] [data-testid="stSidebarNav"],
+[data-testid="stSidebar"][aria-expanded="false"] [data-testid="stSidebarUserContent"] {
+    display: none !important;
+}
+
+[data-testid="stSidebarCollapseButton"],
+[data-testid="collapsedControl"] {
+    visibility: visible !important;
+}
+
+[data-testid="stSidebar"][aria-expanded="false"] [data-testid="stSidebarCollapseButton"] {
+    display: flex !important;
+    visibility: visible !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin-left: 0 !important;
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 12px !important;
+    background: #ffffff !important;
+    border: 1px solid #bfd4ee !important;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.10) !important;
+}
+
+[data-testid="stSidebar"][aria-expanded="false"] [data-testid="stSidebarCollapseButton"] button {
+    width: 38px !important;
+    height: 38px !important;
+}
+
+[data-testid="stSidebar"][aria-expanded="false"] [data-testid="stSidebarCollapseButton"] svg {
+    transform: rotate(180deg);
 }
 
 [data-testid="stSidebar"] .stRadio label {
