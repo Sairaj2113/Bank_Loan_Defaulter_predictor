@@ -157,15 +157,28 @@ _SIDEBAR_CSS = """
 
 @media (max-width: 767px) {
 
+    .main .block-container {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+        padding-top: 4rem !important;
+    }
+
+    /* your existing mobile sidebar styles below */
+    [data-testid="stSidebar"] {
+        ...
+    }
+
     /* Sidebar slides in from the left as an overlay; hidden by default */
     [data-testid="stSidebar"] {
         position: fixed !important;
         top: 0 !important;
         left: 0 !important;
         height: 100dvh !important;
-        width: 82vw !important;
-        max-width: 300px !important;
-        min-width: unset !important;
+
+        width: 85vw !important;
+        max-width: 340px !important;
+        min-width: 280px !important;
+
         z-index: 1100 !important;
         transform: translateX(-100%) !important;
         transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1) !important;
@@ -190,11 +203,17 @@ _SIDEBAR_CSS = """
         z-index: -1;
     }
 
-    /* Hide Streamlit's built-in arrow collapse button on mobile */
+    /* Keep Streamlit toggle available for JS but invisible */
     [data-testid="stSidebarCollapseButton"],
     [data-testid="collapsedControl"] {
-        display: none !important;
-        visibility: hidden !important;
+        opacity: 0 !important;
+        position: fixed !important;
+        top: 10px !important;
+        left: 10px !important;
+        width: 1px !important;
+        height: 1px !important;
+        overflow: hidden !important;
+        z-index: -1 !important;
     }
 
     /* Hamburger button — fixed to top-left of the page, always visible */

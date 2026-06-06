@@ -17,6 +17,13 @@ from components.prediction_card import render_prediction_result
 from components.sidebar import render_navigation
 from utils.api_client import get_customer, get_customers, get_predictions, predict_customer
 
+st.set_page_config(
+    page_title="Bank Loan Insight",
+    page_icon="🏦",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 APP_USERNAME = "bankadmin"
 APP_PASSWORD = "admin123"
 
